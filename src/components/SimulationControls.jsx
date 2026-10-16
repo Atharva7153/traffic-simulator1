@@ -9,7 +9,6 @@ export default function SimulationControls() {
   const {
     isRunning, toggleRunning, reset, spawnRate, setSpawnRate, elapsedTime,
     controllerMode, setControllerMode, simSpeed, setSimSpeed, phase, phaseRemaining,
-    railwayCrossings, crossingState, crossingRemaining, startRailwayCycle,
     emergency, dispatchAmbulance,
   } = useSimulation()
 
@@ -166,22 +165,6 @@ export default function SimulationControls() {
         </div>
       </div>
 
-      {railwayCrossings.length > 0 && (
-        <div className="mt-3 rounded-md border border-junction-amber/20 bg-junction-amber/5 p-2.5">
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] font-semibold uppercase tracking-wider text-junction-amber">Rail crossing · {crossingState}</span>
-            {crossingState !== 'open' && <span className="font-mono text-[10px] text-white">{Math.ceil(crossingRemaining)}s</span>}
-          </div>
-          <button
-            onClick={startRailwayCycle}
-            disabled={!isRunning || crossingState !== 'open'}
-            className="mt-2 w-full rounded border border-junction-amber/30 bg-black/20 py-1.5 text-[10px] text-junction-amber disabled:opacity-40"
-          >
-            {isRunning ? 'Begin warning → closure cycle' : 'Start simulation to cycle crossing'}
-          </button>
-          <p className="mt-1 text-[9px] leading-relaxed text-junction-muted">Manual warning (3s), closure (8s), then reopen. No train actor is simulated.</p>
-        </div>
-      )}
     </motion.div>
   )
 }

@@ -1,16 +1,37 @@
-# React + Vite
+# Traffic Junction Simulator
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+A browser based 3D Indian traffic junction simulator built with React, Vite, and React Three Fiber. It includes a signal controlled four way junction, procedural Indian road vehicles, emergency ambulance priority, environment presets, and traffic analytics.
 
-Currently, two official plugins are available:
+## Screenshots
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+### Junction and railway crossing
 
-## React Compiler
+![Simulator overview showing the junction, ground-level railway, barriers, and controls](public/screenshots/simulator-overview.png)
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+### Train approaching the crossing
 
-## Expanding the Oxlint configuration
+![Procedural Indian passenger train with the crossing barriers down](public/screenshots/railway-crossing.png)
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and Oxlint's TypeScript related rules in your project.
+## Railway crossing demo
+
+The crossing is an independent demonstration on the north approach. It has two rails, sleepers, warning signals, animated barriers, a locomotive, and three passenger coaches. Dispatch a train from the Railway Crossing panel, or switch to automatic mode for a dispatch every 45 seconds while the crossing is open.
+
+Sequence: **OPEN → WARNING → CLOSED → TRAIN PASSING → CLEARANCE → REOPENING → OPEN**. The train clears the road conflict zone before the clearance and reopening phases begin. Duplicate dispatches are disabled while a cycle is active.
+
+Junction vehicles are not routed through or stopped by this separate demo crossing; their signal and emergency priority logic continues to run independently.
+
+## Run locally
+
+```sh
+npm install
+npm run dev
+```
+
+Open the local URL printed by Vite. Use the sidebar to start or pause road traffic, dispatch an ambulance or train, adjust demand and simulation speed, and switch the environment between day, sunset, and night.
+
+## Checks
+
+```sh
+npm run build
+npm run lint
+```

@@ -3,10 +3,12 @@
  * This module owns traffic state and movement; React and the renderers only
  * receive snapshots of the resulting vehicles and controller state.
  */
+import { APPROACH_LAYOUT, JUNCTION_LAYOUT } from '../network/junctionLayout'
+
 export const DIRECTIONS = ['north', 'south', 'east', 'west']
 
-const PATH_LENGTH = 76
-const STOP_EDGE = 6.5
+const PATH_LENGTH = JUNCTION_LAYOUT.spawnOffset * 2
+const STOP_EDGE = JUNCTION_LAYOUT.stopLineOffset
 const GREEN_ENTRY_BUFFER = 3.6
 const AMBER_SECONDS = 3
 const CLEARANCE_SECONDS = 1
@@ -24,12 +26,10 @@ const VEHICLE_TYPES = {
   ambulance: { length: 4.6, width: 2, speed: 12.5, color: '#f8fafc' },
 }
 
-const ROUTES = {
-  north: { x: -2.5, z: -38, dx: 0, dz: 1 },
-  south: { x: 2.5, z: 38, dx: 0, dz: -1 },
-  east: { x: 38, z: -2.5, dx: -1, dz: 0 },
-  west: { x: -38, z: 2.5, dx: 1, dz: 0 },
-}
+const ROUTES = Object.fromEntries(Object.entries(APPROACH_LAYOUT).map(([direction, approach]) => ([
+  direction,
+  { x: approach.spawn[0], z: approach.spawn[1], dx: approach.vector[0], dz: approach.vector[1] },
+])))
 
 const ZERO_COUNTS = () => ({ north: 0, south: 0, east: 0, west: 0 })
 const OPPOSITE_DIRECTION = { north: 'south', south: 'north', east: 'west', west: 'east' }

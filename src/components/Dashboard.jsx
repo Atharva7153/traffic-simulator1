@@ -13,6 +13,7 @@ import JunctionBuilderPreview from './JunctionBuilderPreview'
 import TrafficAnalysisView from './TrafficAnalysisView'
 import SettingsView from './SettingsView'
 import EnvironmentControl from './EnvironmentControl'
+import RailwayPanel from './RailwayPanel'
 
 function DirectionLegend() {
   return (
@@ -160,6 +161,7 @@ export default function Dashboard() {
 
         {/* Controls */}
         <SimulationControls />
+        <RailwayPanel />
 
         {/* Direction legend */}
         <DirectionLegend />

@@ -52,6 +52,11 @@ export function SimulationProvider({ children }) {
   const [viewMode, setViewMode] = useState('3d')
   const [network, setNetwork] = useState(loadSavedNetwork)
   const [environmentMode, setEnvironmentMode] = useState(loadEnvironmentMode)
+  const [railwayStatus, setRailwayStatus] = useState('OPEN')
+  const [railwayProgress, setRailwayProgress] = useState(0)
+  const [railwayMode, setRailwayMode] = useState('automatic')
+  const [autoTrainIn, setAutoTrainIn] = useState(45)
+  const railwayPhaseElapsed = useRef(0)
 
   const configRef = useRef(null)
   useEffect(() => {
@@ -93,10 +98,22 @@ export function SimulationProvider({ children }) {
     modelRef.current = createSimulationModel()
     setSnapshot(getSimulationSnapshot(modelRef.current))
     setIsRunning(false)
+    railwayPhaseElapsed.current = 0
+    setRailwayStatus('OPEN')
+    setRailwayProgress(0)
+    setAutoTrainIn(45)
   }, [])
   const startRailwayCycle = useCallback(() => {
     if (startRailwayCrossingCycle(modelRef.current)) setSnapshot(getSimulationSnapshot(modelRef.current))
   }, [])
+  const dispatchTrain = useCallback(() => {
+    if (railwayStatus !== 'OPEN') return false
+    railwayPhaseElapsed.current = 0
+    setRailwayProgress(0)
+    setRailwayStatus('WARNING')
+    setAutoTrainIn(45)
+    return true
+  }, [railwayStatus])
   const dispatchAmbulance = useCallback(() => {
     const dispatched = dispatchAmbulanceOnModel(modelRef.current)
     if (!dispatched) return false
@@ -105,6 +122,36 @@ export function SimulationProvider({ children }) {
     return true
   }, [])
   const setView = useCallback((view) => setActiveView(view), [])
+
+  useEffect(() => {
+    if (railwayStatus === 'OPEN') return undefined
+    railwayPhaseElapsed.current = 0
+    const durations = { WARNING: 4, CLOSED: 1.5, 'TRAIN PASSING': 12, CLEARANCE: 1.5, REOPENING: 2 }
+    const timer = window.setInterval(() => {
+      railwayPhaseElapsed.current += 0.1
+      const elapsed = railwayPhaseElapsed.current
+      if (railwayStatus === 'TRAIN PASSING') setRailwayProgress(Math.min(elapsed / durations[railwayStatus], 1))
+      if (elapsed < durations[railwayStatus]) return
+      railwayPhaseElapsed.current = 0
+      const next = { WARNING: 'CLOSED', CLOSED: 'TRAIN PASSING', 'TRAIN PASSING': 'CLEARANCE', CLEARANCE: 'REOPENING', REOPENING: 'OPEN' }
+      setRailwayStatus(next[railwayStatus])
+      if (next[railwayStatus] === 'OPEN') setRailwayProgress(0)
+    }, 100)
+    return () => window.clearInterval(timer)
+  }, [railwayStatus])
+
+  useEffect(() => {
+    if (railwayMode !== 'automatic' || railwayStatus !== 'OPEN') return undefined
+    const timer = window.setTimeout(() => {
+      if (autoTrainIn <= 1) {
+        setAutoTrainIn(45)
+        dispatchTrain()
+      } else {
+        setAutoTrainIn(autoTrainIn - 1)
+      }
+    }, 1000)
+    return () => window.clearTimeout(timer)
+  }, [autoTrainIn, dispatchTrain, railwayMode, railwayStatus])
 
   useEffect(() => {
     if (!isRunning) return undefined
@@ -166,6 +213,12 @@ export function SimulationProvider({ children }) {
     startRailwayCycle,
     dispatchAmbulance,
     railwayCrossings: network.railwayCrossings || [],
+    railwayStatus,
+    railwayProgress,
+    railwayMode,
+    setRailwayMode,
+    autoTrainIn,
+    dispatchTrain,
   }
 
   return <SimulationContext.Provider value={value}>{children}</SimulationContext.Provider>

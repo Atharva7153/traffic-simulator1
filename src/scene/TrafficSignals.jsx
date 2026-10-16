@@ -1,9 +1,11 @@
 /**
- * TrafficSignals.jsx — Four traffic signal assemblies at the junction corners.
+ * TrafficSignals.jsx — Four roadside signal assemblies before the stop bars.
  * Each signal has red, amber, and green lamps that respond to simulation state.
  */
+import { useMemo } from 'react'
+import { CanvasTexture, DoubleSide, SRGBColorSpace } from 'three'
+import { APPROACH_LAYOUT } from '../network/junctionLayout'
 import { useSimulation } from '../simulation/useSimulation'
-import { JUNCTION_SIZE } from './Roads'
 
 const SIGNAL_HEIGHT = 4
 const POLE_RADIUS = 0.12
@@ -27,13 +29,43 @@ function SignalLamp({ position, color, isActive }) {
   )
 }
 
-function SignalAssembly({ position, rotation, signalState }) {
+function createStraightOnlyTexture() {
+  const canvas = document.createElement('canvas')
+  canvas.width = 512
+  canvas.height = 128
+  const context = canvas.getContext('2d')
+  context.fillStyle = '#126d72'
+  context.fillRect(0, 0, canvas.width, canvas.height)
+  context.strokeStyle = '#f8f7ed'
+  context.lineWidth = 9
+  context.strokeRect(6, 6, canvas.width - 12, canvas.height - 12)
+  context.fillStyle = '#fffdf5'
+  context.font = '700 52px system-ui, sans-serif'
+  context.textAlign = 'center'
+  context.textBaseline = 'middle'
+  context.fillText('STRAIGHT ONLY', canvas.width / 2, canvas.height / 2)
+  const texture = new CanvasTexture(canvas)
+  texture.colorSpace = SRGBColorSpace
+  return texture
+}
+
+function SignalAssembly({ position, rotation, signalState, signTexture }) {
   return (
     <group position={position} rotation={rotation}>
       {/* Pole */}
       <mesh position={[0, SIGNAL_HEIGHT / 2, 0]}>
         <cylinderGeometry args={[POLE_RADIUS, POLE_RADIUS, SIGNAL_HEIGHT, 8]} />
         <meshStandardMaterial color="#374151" metalness={0.6} roughness={0.4} />
+      </mesh>
+
+      {/* Indian-style straight-ahead sign on the approach signal pole. */}
+      <mesh position={[0, 2.25, 0.1]}>
+        <boxGeometry args={[2.7, 0.78, 0.12]} />
+        <meshStandardMaterial color="#126d72" roughness={0.6} />
+      </mesh>
+      <mesh position={[0, 2.25, 0.035]} rotation={[0, Math.PI, 0]}>
+        <planeGeometry args={[2.5, 0.58]} />
+        <meshBasicMaterial map={signTexture} side={DoubleSide} toneMapped={false} />
       </mesh>
 
       {/* Signal housing */}
@@ -73,37 +105,20 @@ function SignalAssembly({ position, rotation, signalState }) {
 
 export default function TrafficSignals() {
   const { signals } = useSimulation()
-  const offset = JUNCTION_SIZE / 2 + 1.5
+  const signTexture = useMemo(createStraightOnlyTexture, [])
+  const rotations = { north: 0, south: Math.PI, east: -Math.PI / 2, west: Math.PI / 2 }
 
   return (
     <group>
-      {/* North signal — on the right side of the north approach, facing south */}
-      <SignalAssembly
-        position={[offset - 2, 0, -offset]}
-        rotation={[0, Math.PI, 0]}
-        signalState={signals.north}
-      />
-
-      {/* South signal — on the right side of the south approach, facing north */}
-      <SignalAssembly
-        position={[-(offset - 2), 0, offset]}
-        rotation={[0, 0, 0]}
-        signalState={signals.south}
-      />
-
-      {/* East signal — on the right side of the east approach, facing west */}
-      <SignalAssembly
-        position={[offset, 0, offset - 2]}
-        rotation={[0, Math.PI / 2, 0]}
-        signalState={signals.east}
-      />
-
-      {/* West signal — on the right side of the west approach, facing east */}
-      <SignalAssembly
-        position={[-offset, 0, -(offset - 2)]}
-        rotation={[0, -Math.PI / 2, 0]}
-        signalState={signals.west}
-      />
+      {Object.entries(APPROACH_LAYOUT).map(([direction, approach]) => (
+        <SignalAssembly
+          key={direction}
+          position={[approach.signal[0], 0, approach.signal[1]]}
+          rotation={[0, rotations[direction], 0]}
+          signalState={signals[direction]}
+          signTexture={signTexture}
+        />
+      ))}
     </group>
   )
 }

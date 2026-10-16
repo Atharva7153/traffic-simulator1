@@ -8,6 +8,7 @@ import Roads from './Roads'
 import TrafficSignals from './TrafficSignals'
 import Vehicles from './Vehicles'
 import Environment from './Environment'
+import RailwayCrossing from './RailwayCrossing'
 
 const LIGHTING = {
   day: {
@@ -97,6 +98,7 @@ function SceneContent() {
     <>
       <DayNightLighting mode={environmentMode} />
       <Roads />
+      <RailwayCrossing />
       <TrafficSignals />
       <Vehicles />
       <Environment mode={environmentMode} />
@@ -105,7 +107,7 @@ function SceneContent() {
         maxPolarAngle={Math.PI / 2.15}
         minPolarAngle={Math.PI / 8}
         minDistance={20}
-        maxDistance={78}
+        maxDistance={108}
         enableDamping
         dampingFactor={0.06}
         target={[0, 0, 0]}
@@ -118,7 +120,7 @@ export default function JunctionScene() {
   return (
     <div className="canvas-container w-full h-full">
       <Canvas
-        camera={{ position: [43, 38, 45], fov: 48, near: 0.5, far: 300 }}
+        camera={{ position: [49, 54, 52], fov: 48, near: 0.5, far: 300 }}
         shadows="percentage"
         dpr={[1, 1.35]}
         gl={{ antialias: true, powerPreference: 'default' }}

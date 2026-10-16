@@ -77,8 +77,10 @@
 
 // ─── Default four-way junction preset ───────────────────────────────────────
 
-const LANE_WIDTH = 3
-const ARM_LENGTH = 40
+import { JUNCTION_LAYOUT } from './junctionLayout'
+
+const LANE_WIDTH = JUNCTION_LAYOUT.lane.width
+const ARM_LENGTH = JUNCTION_LAYOUT.road.extent
 
 export function createDefaultJunction() {
   /** @type {RoadNetwork} */
@@ -86,15 +88,15 @@ export function createDefaultJunction() {
     name: 'Default Four-Way Junction',
     metadata: {
       author: 'System',
-      description: 'Standard Indian four-way intersection with two lanes per direction.',
+      description: 'Indian urban junction with one active straight-through lane per direction and marked inactive turning pockets.',
       created: new Date().toISOString(),
     },
     nodes: [
-      { id: 'center', type: 'intersection', x: 0, z: 0, config: { shape: 'cross' } },
-      { id: 'north_end', type: 'endpoint', x: 0, z: -ARM_LENGTH - 6 },
-      { id: 'south_end', type: 'endpoint', x: 0, z: ARM_LENGTH + 6 },
-      { id: 'east_end', type: 'endpoint', x: ARM_LENGTH + 6, z: 0 },
-      { id: 'west_end', type: 'endpoint', x: -(ARM_LENGTH + 6), z: 0 },
+      { id: 'center', type: 'intersection', x: 0, z: 0, config: { shape: 'channelized-cross', layout: 'indian-urban-v1' } },
+      { id: 'north_end', type: 'endpoint', x: 0, z: -ARM_LENGTH },
+      { id: 'south_end', type: 'endpoint', x: 0, z: ARM_LENGTH },
+      { id: 'east_end', type: 'endpoint', x: ARM_LENGTH, z: 0 },
+      { id: 'west_end', type: 'endpoint', x: -ARM_LENGTH, z: 0 },
     ],
     edges: [
       {
