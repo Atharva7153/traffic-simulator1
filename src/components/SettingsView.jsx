@@ -1,8 +1,9 @@
 /**
  * SettingsView.jsx — Simulation and display settings panel.
  */
-import { Settings, Sliders, Monitor, CheckCircle2 } from 'lucide-react'
+import { Settings, Sliders, Monitor, CheckCircle2, Sun } from 'lucide-react'
 import { useSimulation } from '../simulation/useSimulation'
+import EnvironmentControl from './EnvironmentControl'
 
 export default function SettingsView() {
   const { setView, viewMode, setViewMode } = useSimulation()
@@ -27,7 +28,7 @@ export default function SettingsView() {
         </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 my-6 max-w-4xl">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5 my-6 max-w-5xl">
         {/* Render Engine Preference */}
         <div className="bg-junction-card border border-junction-border rounded-xl p-5 space-y-4">
           <div className="flex items-center gap-2 text-white font-semibold text-sm">
@@ -65,6 +66,16 @@ export default function SettingsView() {
           </div>
         </div>
 
+        <div className="bg-junction-card border border-junction-border rounded-xl p-5 space-y-4">
+          <div className="flex items-center gap-2 text-junction-text font-semibold text-sm">
+            <Sun className="h-4 w-4 text-junction-accent" />
+            <span>Environment lighting</span>
+          </div>
+          <p className="text-xs text-junction-muted">Switch the 3D scene and top-down canvas between daylight, sunset, and night. The scene lighting transitions smoothly.</p>
+          <EnvironmentControl />
+          <p className="text-[10px] text-junction-muted">Your selection is remembered in this browser.</p>
+        </div>
+
         {/* Active model capabilities */}
         <div className="bg-junction-card border border-junction-border rounded-xl p-5 space-y-3">
           <div className="flex items-center gap-2 text-white font-semibold text-sm">
@@ -77,8 +88,9 @@ export default function SettingsView() {
           <div className="grid grid-cols-2 gap-2 text-[10px] text-junction-muted">
             <div className="rounded-md border border-white/5 bg-black/20 p-2">Straight-through routes</div>
             <div className="rounded-md border border-white/5 bg-black/20 p-2">3s amber + 1s all-red</div>
-            <div className="rounded-md border border-white/5 bg-black/20 p-2">Sedan, SUV, bus, auto</div>
+            <div className="rounded-md border border-white/5 bg-black/20 p-2">Cars, bus, auto, motorcycle</div>
             <div className="rounded-md border border-white/5 bg-black/20 p-2">No turn routing</div>
+            <div className="rounded-md border border-white/5 bg-black/20 p-2">Ambulance signal preemption</div>
           </div>
           <div className="pt-1 flex items-center gap-2 text-xs text-junction-green">
             <CheckCircle2 className="w-4 h-4" />

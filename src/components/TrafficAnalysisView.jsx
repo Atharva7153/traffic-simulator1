@@ -11,11 +11,14 @@ const TYPES = [
   { key: 'suv', label: 'SUVs', color: 'bg-red-500' },
   { key: 'bus', label: 'Buses', color: 'bg-amber-500' },
   { key: 'auto', label: 'Autos', color: 'bg-emerald-500' },
+  { key: 'motorcycle', label: 'Motorcycles', color: 'bg-slate-500' },
+  { key: 'ambulance', label: 'Ambulance', color: 'bg-rose-500' },
 ]
 const APPROACH_MIX = [
   { key: 'cars', color: 'bg-blue-500' },
   { key: 'buses', color: 'bg-amber-500' },
   { key: 'autos', color: 'bg-emerald-500' },
+  { key: 'twoWheelers', color: 'bg-slate-500' },
 ]
 
 function Metric({ label, value, suffix = '' }) {

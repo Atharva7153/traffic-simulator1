@@ -184,7 +184,7 @@ function approachMeasurements(model) {
       avgWaitTimeSec: (model.totalWaitCompletedByDirection[direction] + currentWaitByDirection[direction])
         / Math.max(1, model.waitedVehiclesByDirection[direction] + currentWaitedByDirection[direction]),
       composition: {
-        cars: percent(types.sedan + types.suv),
+        cars: percent(types.sedan + types.suv + types.ambulance),
         buses: percent(types.bus),
         twoWheelers: percent(types.motorcycle),
         autos: percent(types.auto),

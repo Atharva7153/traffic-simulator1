@@ -12,9 +12,9 @@ const DIRECTIONS = [
 ]
 
 const SIGNAL_COLORS = {
-  red: { bg: 'bg-red-500', glow: 'shadow-red-500/50', text: 'text-red-400' },
-  amber: { bg: 'bg-amber-400', glow: 'shadow-amber-400/50', text: 'text-amber-400' },
-  green: { bg: 'bg-emerald-500', glow: 'shadow-emerald-500/50', text: 'text-emerald-400' },
+  red: { bg: 'bg-red-600', glow: '', text: 'text-red-700' },
+  amber: { bg: 'bg-amber-500', glow: '', text: 'text-amber-700' },
+  green: { bg: 'bg-emerald-600', glow: '', text: 'text-emerald-700' },
 }
 
 function SignalDot({ color, isActive }) {

@@ -21,8 +21,8 @@ function loadSavedNetwork() {
     const parsed = {
       ...stored,
       railwayCrossings: Array.isArray(stored.railwayCrossings) ? stored.railwayCrossings : [],
-      metroEnabled: stored.metroEnabled === true,
     }
+    delete parsed.metroEnabled
     return validateNetwork(parsed).length ? fallback : parsed
   } catch {
     return fallback
@@ -31,6 +31,7 @@ function loadSavedNetwork() {
 
 function loadEnvironmentMode() {
   try {
+    if (typeof window === 'undefined') return 'day'
     const saved = window.localStorage.getItem('swayambhu-environment-mode')
     return ['day', 'sunset', 'night'].includes(saved) ? saved : 'day'
   } catch {

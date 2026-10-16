@@ -1,7 +1,7 @@
 /**
  * SimulationControls.jsx — Play/Pause, Reset, and Spawn Rate controls.
  */
-import { Play, Pause, RotateCcw, Gauge } from 'lucide-react'
+import { Play, Pause, RotateCcw, Gauge, Siren } from 'lucide-react'
 import { motion } from 'motion/react'
 import { useSimulation } from '../simulation/useSimulation'
 
@@ -10,6 +10,7 @@ export default function SimulationControls() {
     isRunning, toggleRunning, reset, spawnRate, setSpawnRate, elapsedTime,
     controllerMode, setControllerMode, simSpeed, setSimSpeed, phase, phaseRemaining,
     railwayCrossings, crossingState, crossingRemaining, startRailwayCycle,
+    emergency, dispatchAmbulance,
   } = useSimulation()
 
   const formatTime = (seconds) => {
@@ -32,7 +33,7 @@ export default function SimulationControls() {
 
       {/* Timer display */}
       <div className="text-center mb-3">
-        <span className="text-2xl font-mono font-bold text-white tabular-nums tracking-wider">
+        <span className="text-2xl font-mono font-bold text-junction-text tabular-nums tracking-wider">
           {formatTime(elapsedTime)}
         </span>
         <p className="text-[10px] text-junction-muted mt-0.5">Elapsed Time</p>
@@ -60,10 +61,10 @@ export default function SimulationControls() {
         </button>
       </div>
 
-      <div className="mb-3 rounded-md bg-black/20 p-2.5">
+      <div className="mb-3 rounded-lg bg-black/20 p-2.5">
         <div className="flex items-center justify-between text-[10px] uppercase tracking-wider">
           <span className="text-junction-muted">{phase.replaceAll('_', ' ')}</span>
-          <span className="font-mono font-bold text-white">{Math.ceil(phaseRemaining)}s</span>
+          <span className="font-mono font-bold text-junction-text">{Math.ceil(phaseRemaining)}s</span>
         </div>
         <div className="mt-2 grid grid-cols-2 gap-1 rounded-md bg-black/30 p-1">
           {['fixed', 'adaptive'].map((mode) => (
@@ -81,6 +82,30 @@ export default function SimulationControls() {
             </button>
           ))}
         </div>
+      </div>
+
+      <div className={`mb-3 rounded-lg border p-2.5 ${emergency ? 'border-red-200 bg-red-50' : 'border-junction-border bg-junction-card'}`}>
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <Siren className={`h-4 w-4 ${emergency ? 'text-red-600' : 'text-junction-muted'}`} />
+            <div>
+              <div className={`text-[10px] font-bold uppercase tracking-wide ${emergency ? 'text-red-700' : 'text-junction-text'}`}>
+                {emergency ? 'Emergency priority' : 'Emergency response'}
+              </div>
+              <div className="mt-0.5 text-[9px] text-junction-muted">
+                {emergency ? `${emergency.direction} approach · ${emergency.stage.replaceAll('-', ' ')}` : 'Ambulance · straight through'}
+              </div>
+            </div>
+          </div>
+          {emergency && <span className="rounded-full bg-red-100 px-2 py-1 text-[9px] font-semibold text-red-700">ACTIVE</span>}
+        </div>
+        <button
+          onClick={dispatchAmbulance}
+          disabled={Boolean(emergency)}
+          className="mt-2 w-full rounded-lg border border-red-200 bg-white px-2.5 py-2 text-[10px] font-semibold text-red-700 shadow-sm transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-55"
+        >
+          {emergency ? 'Ambulance dispatched' : 'Dispatch Ambulance'}
+        </button>
       </div>
 
       {/* Spawn Rate Slider */}
@@ -109,7 +134,7 @@ export default function SimulationControls() {
             [&::-webkit-slider-thumb]:shadow-md [&::-webkit-slider-thumb]:cursor-pointer
             bg-gradient-to-r from-junction-accent-dim to-junction-accent"
           style={{
-            background: `linear-gradient(to right, #0e7490 0%, #06b6d4 ${spawnRate}%, #1e293b ${spawnRate}%, #1e293b 100%)`,
+            background: `linear-gradient(to right, #0f766e 0%, #14b8a6 ${spawnRate}%, #dce6e3 ${spawnRate}%, #dce6e3 100%)`,
           }}
         />
         <div className="flex justify-between mt-1">

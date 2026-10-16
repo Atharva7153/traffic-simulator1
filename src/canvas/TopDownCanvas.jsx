@@ -65,14 +65,17 @@ export default function TopDownCanvas() {
   }, [railwayCrossings, crossingState, environmentMode])
 
   const draw = useCallback((canvas, ctx) => {
+    const colors = PALETTES[environmentRef.current] || PALETTES.day
     const dpr = window.devicePixelRatio || 1
     const rect = canvas.getBoundingClientRect()
     const cw = rect.width
     const ch = rect.height
 
     // Set canvas resolution
-    canvas.width = cw * dpr
-    canvas.height = ch * dpr
+    const pixelWidth = Math.round(cw * dpr)
+    const pixelHeight = Math.round(ch * dpr)
+    if (canvas.width !== pixelWidth) canvas.width = pixelWidth
+    if (canvas.height !== pixelHeight) canvas.height = pixelHeight
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
 
     // Clear
@@ -90,7 +93,6 @@ export default function TopDownCanvas() {
     ctx.scale(scale, scale)
 
     const sig = signalsRef.current
-    const colors = PALETTES[environmentRef.current] || PALETTES.day
 
     // --- Sidewalk corners ---
     const cornerSize = ARM_LEN - 10

@@ -6,54 +6,51 @@ import { motion } from 'motion/react'
 import { useSimulation } from '../simulation/useSimulation'
 
 const NAV_ITEMS = [
-  { id: 'simulation', label: 'Simulation', icon: Activity },
-  { id: 'builder', label: 'Junction Builder', icon: Hammer, badge: 'Architecture' },
-  { id: 'analytics', label: 'AI Analytics', icon: Brain, badge: 'Intelligence' },
-  { id: 'settings', label: 'Settings', icon: Settings },
+  { id: 'simulation', label: 'Simulation', short: 'Sim', icon: Activity },
+  { id: 'builder', label: 'Junction Builder', short: 'Builder', icon: Hammer },
+  { id: 'analytics', label: 'Analytics', short: 'Analytics', icon: Brain },
+  { id: 'settings', label: 'Settings', short: 'Settings', icon: Settings },
 ]
 
 export default function Header() {
   const { activeView, setView, isRunning } = useSimulation()
 
   return (
-    <header className="flex items-center justify-between px-5 py-3 border-b border-junction-border bg-junction-card/80 backdrop-blur-md z-10 shrink-0">
+    <header className="flex min-h-[64px] min-w-0 items-center justify-between gap-2 border-b border-junction-border bg-white px-3 py-2.5 shadow-sm z-10 shrink-0 sm:gap-4 sm:px-5">
       {/* Brand */}
-      <div className="flex items-center gap-3">
-        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center shadow-lg shadow-cyan-500/20">
-          <Radio className="w-4 h-4 text-white" />
+      <div className="flex min-w-0 shrink items-center gap-2 sm:gap-3">
+        <div className="w-9 h-9 rounded-xl bg-junction-accent flex items-center justify-center">
+          <Radio className="w-4 h-4" style={{ color: '#fff' }} />
         </div>
         <div>
-          <h1 className="text-sm font-bold tracking-wide text-white leading-none">
+          <h1 className="whitespace-nowrap text-[11px] font-bold tracking-wide text-junction-text leading-none sm:text-sm">
             TRAFFIC JUNCTION SIMULATOR
           </h1>
-          <p className="text-[10px] text-junction-muted tracking-widest uppercase mt-0.5">
+          <p className="mt-0.5 hidden text-[10px] uppercase tracking-widest text-junction-muted sm:block">
             Smart Signals. Smoother Cities.
           </p>
         </div>
       </div>
 
       {/* Navigation */}
-      <nav className="flex items-center gap-1">
-        {NAV_ITEMS.map(({ id, label, icon: Icon, badge }) => {
+      <nav className="flex shrink-0 items-center gap-0.5 sm:gap-1">
+        {NAV_ITEMS.map(({ id, label, short, icon: Icon }) => {
           const isActive = activeView === id
 
           return (
             <button
               key={id}
               onClick={() => setView(id)}
-              className={`relative flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+              aria-label={label}
+              className={`relative flex items-center gap-1.5 rounded-lg px-2 py-2 text-[11px] font-semibold transition-colors sm:gap-2 sm:px-3 sm:text-xs ${
                 isActive
                   ? 'text-junction-accent bg-junction-accent/10'
-                  : 'text-junction-muted hover:text-junction-text hover:bg-white/5'
+                  : 'text-junction-muted hover:text-junction-text hover:bg-junction-dark'
               }`}
             >
               <Icon className="w-3.5 h-3.5" />
-              <span>{label}</span>
-              {badge && (
-                <span className="hidden md:inline-block text-[9px] px-1 py-0.2 rounded bg-junction-accent/20 text-junction-accent font-normal">
-                  {badge}
-                </span>
-              )}
+              <span className="hidden xl:inline">{label}</span>
+              <span className="xl:hidden">{short}</span>
               {isActive && (
                 <motion.div
                   layoutId="nav-indicator"
@@ -68,8 +65,8 @@ export default function Header() {
 
       {/* Status indicator */}
       <div className="flex items-center gap-2">
-        <div className={`w-2 h-2 rounded-full ${isRunning ? 'bg-junction-green animate-pulse' : 'bg-junction-muted'}`} />
-        <span className="text-xs text-junction-muted font-medium">
+        <div className={`w-2 h-2 rounded-full ${isRunning ? 'bg-junction-green' : 'bg-slate-400'}`} />
+        <span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${isRunning ? 'bg-emerald-50 text-junction-green' : 'bg-slate-100 text-junction-muted'}`}>
           {isRunning ? 'Running' : 'Paused'}
         </span>
       </div>

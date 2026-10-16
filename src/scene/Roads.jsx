@@ -11,10 +11,10 @@ const LANE_WIDTH = 3
 const JUNCTION_SIZE = ROAD_WIDTH
 
 // Shared materials (created once, reused)
-const asphaltColor = '#2a2a2e'
-const markingColor = '#e8e8e0'
-const curbColor = '#6b7280'
-const sidewalkColor = '#4a4a50'
+const asphaltColor = '#454c4e'
+const markingColor = '#f7f5ed'
+const curbColor = '#e6e6dd'
+const sidewalkColor = '#d0d8d0'
 
 function DashedCenterLine({ position, rotation, length }) {
   const dashes = useMemo(() => {
@@ -32,7 +32,7 @@ function DashedCenterLine({ position, rotation, length }) {
   return (
     <group position={position} rotation={rotation}>
       {dashes.map((pos, i) => (
-        <mesh key={i} position={[pos, 0.02, 0]}>
+        <mesh key={i} position={[pos, 0.075, 0]}>
           <boxGeometry args={[1.2, 0.01, 0.12]} />
           <meshStandardMaterial color={markingColor} />
         </mesh>
@@ -43,7 +43,7 @@ function DashedCenterLine({ position, rotation, length }) {
 
 function StopLine({ position, rotation }) {
   return (
-    <mesh position={position} rotation={rotation}>
+    <mesh position={[position[0], 0.075, position[2]]} rotation={rotation}>
       <boxGeometry args={[ROAD_WIDTH - 1, 0.02, 0.3]} />
       <meshStandardMaterial color={markingColor} />
     </mesh>
@@ -64,7 +64,7 @@ function ZebraCrossing({ position, rotation }) {
   return (
     <group position={position} rotation={rotation}>
       {stripes.map((x, i) => (
-        <mesh key={i} position={[x, 0.02, 0]}>
+        <mesh key={i} position={[x, 0.075, 0]}>
           <boxGeometry args={[1.0, 0.01, 2.0]} />
           <meshStandardMaterial color={markingColor} opacity={0.85} transparent />
         </mesh>
@@ -106,11 +106,11 @@ function LaneMarkings({ position, rotation, roadLength }) {
       {/* Center dashed line */}
       <DashedCenterLine position={[0, 0, 0]} rotation={[0, 0, 0]} length={roadLength} />
       {/* Edge lines (solid) */}
-      <mesh position={[0, 0.02, ROAD_WIDTH / 2 - 0.3]}>
+      <mesh position={[0, 0.075, ROAD_WIDTH / 2 - 0.3]}>
         <boxGeometry args={[roadLength, 0.01, 0.1]} />
         <meshStandardMaterial color={markingColor} opacity={0.5} transparent />
       </mesh>
-      <mesh position={[0, 0.02, -(ROAD_WIDTH / 2 - 0.3)]}>
+      <mesh position={[0, 0.075, -(ROAD_WIDTH / 2 - 0.3)]}>
         <boxGeometry args={[roadLength, 0.01, 0.1]} />
         <meshStandardMaterial color={markingColor} opacity={0.5} transparent />
       </mesh>
@@ -157,21 +157,6 @@ function RailwayCrossing({ direction, state }) {
           </mesh>
         </group>
       ))}
-    </group>
-  )
-}
-
-function MetroLayer() {
-  return (
-    <group>
-      <mesh position={[-1.1, 8, 0]}><boxGeometry args={[0.35, 0.32, 92]} /><meshStandardMaterial color="#60a5fa" metalness={0.45} roughness={0.35} /></mesh>
-      <mesh position={[1.1, 8, 0]}><boxGeometry args={[0.35, 0.32, 92]} /><meshStandardMaterial color="#60a5fa" metalness={0.45} roughness={0.35} /></mesh>
-      {[-36, -18, 0, 18, 36].map(z => [-1, 1].map(side => (
-        <mesh key={`${z}-${side}`} position={[side * 5.5, 4.1, z]}>
-          <cylinderGeometry args={[0.28, 0.42, 8.2, 8]} />
-          <meshStandardMaterial color="#64748b" roughness={0.8} />
-        </mesh>
-      )))}
     </group>
   )
 }
@@ -237,7 +222,6 @@ export default function Roads() {
       {(network.railwayCrossings || []).map(crossing => (
         <RailwayCrossing key={crossing.id} direction={crossing.direction} state={crossingState} />
       ))}
-      {network.metroEnabled && <MetroLayer />}
     </group>
   )
 }

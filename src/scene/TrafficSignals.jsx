@@ -7,7 +7,7 @@ import { JUNCTION_SIZE } from './Roads'
 
 const SIGNAL_HEIGHT = 4
 const POLE_RADIUS = 0.12
-const LAMP_RADIUS = 0.28
+const LAMP_RADIUS = 0.34
 const HOUSING_WIDTH = 0.9
 const HOUSING_HEIGHT = 2.2
 const HOUSING_DEPTH = 0.5
@@ -19,7 +19,7 @@ function SignalLamp({ position, color, isActive }) {
       <meshStandardMaterial
         color={color}
         emissive={isActive ? color : '#111'}
-        emissiveIntensity={isActive ? 2.5 : 0.05}
+        emissiveIntensity={isActive ? 4 : 0.025}
         roughness={0.3}
         metalness={0.1}
       />

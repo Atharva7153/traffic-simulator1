@@ -12,6 +12,7 @@ import SimulationControls from './SimulationControls'
 import JunctionBuilderPreview from './JunctionBuilderPreview'
 import TrafficAnalysisView from './TrafficAnalysisView'
 import SettingsView from './SettingsView'
+import EnvironmentControl from './EnvironmentControl'
 
 function DirectionLegend() {
   return (
@@ -67,9 +68,9 @@ export default function Dashboard() {
 
   // Primary Simulation view
   return (
-    <div className="flex-1 flex overflow-hidden">
+    <div className="min-w-0 flex-1 flex overflow-hidden">
       {/* Main Viewport (3D or 2D Top-Down Canvas) */}
-      <div className="flex-1 relative bg-junction-dark">
+      <div className="relative min-w-0 flex-1 bg-junction-dark">
         {/* Render either 3D Three.js scene or 2D HTML Canvas */}
         {viewMode === '3d' ? (
           <JunctionScene />
@@ -80,13 +81,14 @@ export default function Dashboard() {
         {/* View mode switcher badge & controls */}
         <div className="absolute top-3 left-3 flex items-center gap-2 z-10">
           {/* Segmented Switcher for 3D vs 2D Top-Down */}
-          <div className="flex items-center bg-black/60 backdrop-blur-md p-1 rounded-lg border border-white/10 shadow-lg">
+          <div className="flex items-center bg-white/95 backdrop-blur-sm p-1 rounded-xl border border-junction-border shadow-sm">
             <button
               onClick={() => setViewMode('3d')}
+              style={viewMode === '3d' ? { color: '#fff' } : undefined}
               className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-medium transition-all ${
                 viewMode === '3d'
-                  ? 'bg-junction-accent text-junction-dark font-semibold shadow'
-                  : 'text-junction-muted hover:text-white'
+                  ? 'bg-junction-accent text-white font-semibold shadow-sm'
+                  : 'text-junction-muted hover:text-junction-text'
               }`}
             >
               <Eye className="w-3.5 h-3.5" />
@@ -94,10 +96,11 @@ export default function Dashboard() {
             </button>
             <button
               onClick={() => setViewMode('2d')}
+              style={viewMode === '2d' ? { color: '#fff' } : undefined}
               className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-medium transition-all ${
                 viewMode === '2d'
-                  ? 'bg-junction-accent text-junction-dark font-semibold shadow'
-                  : 'text-junction-muted hover:text-white'
+                  ? 'bg-junction-accent text-white font-semibold shadow-sm'
+                  : 'text-junction-muted hover:text-junction-text'
               }`}
             >
               <Layers className="w-3.5 h-3.5" />
@@ -106,18 +109,22 @@ export default function Dashboard() {
           </div>
 
           {/* Interaction hint */}
-          <div className="hidden sm:block bg-black/50 backdrop-blur-sm rounded-md px-2.5 py-1.5 border border-white/5">
-            <span className="text-[10px] font-medium text-white/70 tracking-wider">
+          <div className="hidden xl:block bg-white/95 rounded-lg px-2.5 py-1.5 border border-junction-border shadow-sm">
+            <span className="text-[10px] font-medium text-junction-muted tracking-wide">
               {viewMode === '3d'
                 ? '3D Orbit: Left-drag · Pan: Right-drag · Zoom: Scroll'
                 : 'Top-Down 2D HTML Canvas · Auto-resizing · Shared Simulation State'}
             </span>
           </div>
         </div>
+
+        <div className="absolute top-3 right-3 z-10">
+          <EnvironmentControl />
+        </div>
       </div>
 
       {/* Right sidebar */}
-      <aside className="w-64 flex flex-col gap-2 p-2 border-l border-junction-border bg-junction-dark/50 overflow-y-auto shrink-0">
+      <aside className="flex w-64 shrink-0 flex-col gap-2 overflow-y-auto border-l border-junction-border bg-white p-2">
         {/* Stats row */}
         <div className="grid grid-cols-2 gap-2">
           <StatCard

@@ -169,21 +169,21 @@ export default function JunctionBuilderPreview() {
           ['Lanes', totalLanes],
           ['Signals', network.signals.length],
           ['Rail crossings', network.railwayCrossings?.length || 0],
-          ['Metro layer', network.metroEnabled ? 'On' : 'Off'],
+          ['Emergency dispatch', 'Ready'],
         ].map(([label, value]) => <div key={label} className="rounded-lg border border-junction-border bg-junction-card p-3"><div className="text-[9px] uppercase tracking-wider text-junction-muted">{label}</div><div className="mt-1 text-xl font-bold text-white">{value}</div></div>)}
       </div>
 
       <div className="grid flex-1 grid-cols-1 gap-4 xl:grid-cols-5">
         <section className="xl:col-span-3 rounded-xl border border-junction-border bg-junction-card p-3">
           <div className="mb-2 flex items-center justify-between px-1"><h3 className="text-xs font-bold uppercase tracking-wider text-white">Network view</h3><span className="text-[9px] text-junction-muted">Click a road segment to select it</span></div>
-          <svg viewBox="0 0 500 500" className="w-full rounded-lg bg-[#111923]">
+          <svg viewBox="0 0 500 500" className="w-full rounded-lg bg-[#f3f7f5]">
             {network.edges.map(edge => {
               const from = point(nodeById.get(edge.fromNodeId) || { x: 0, z: 0 })
               const to = point(nodeById.get(edge.toNodeId) || { x: 0, z: 0 })
               const selected = edge.id === selectedEdgeId
               const width = Math.max(6, edge.lanes.length * 5)
               return <g key={edge.id} onClick={() => setSelectedEdgeId(edge.id)} className="cursor-pointer">
-                <line x1={from.x} y1={from.y} x2={to.x} y2={to.y} stroke={selected ? '#0891b2' : '#353b46'} strokeWidth={width + 7} strokeLinecap="round" />
+                <line x1={from.x} y1={from.y} x2={to.x} y2={to.y} stroke={selected ? '#0f766e' : '#68777a'} strokeWidth={width + 7} strokeLinecap="round" />
                 <line x1={from.x} y1={from.y} x2={to.x} y2={to.y} stroke="#cbd5e1" strokeWidth="1.5" strokeDasharray="7 7" opacity="0.55" />
                 <line x1={from.x} y1={from.y} x2={to.x} y2={to.y} stroke="transparent" strokeWidth="32" />
               </g>
@@ -191,17 +191,17 @@ export default function JunctionBuilderPreview() {
             {network.nodes.map(node => {
               const p = point(node)
               return <g key={node.id}>
-                <circle cx={p.x} cy={p.y} r={node.type === 'intersection' ? 10 : 6} fill={node.type === 'intersection' ? '#22d3ee' : '#e2e8f0'} stroke="#0f172a" strokeWidth="3" />
-                <text x={p.x + 11} y={p.y - 10} fill="#94a3b8" fontSize="9">{node.id}</text>
+                <circle cx={p.x} cy={p.y} r={node.type === 'intersection' ? 10 : 6} fill={node.type === 'intersection' ? '#0f766e' : '#ffffff'} stroke="#52676a" strokeWidth="3" />
+                <text x={p.x + 11} y={p.y - 10} fill="#526672" fontSize="9">{node.id}</text>
               </g>
             })}
             {network.railwayCrossings?.map(crossing => {
               const p = crossing.direction === 'north' ? point({ x: 0, z: -23 }) : crossing.direction === 'south' ? point({ x: 0, z: 23 }) : crossing.direction === 'east' ? point({ x: 23, z: 0 }) : point({ x: -23, z: 0 })
-              return <g key={crossing.id}><circle cx={p.x} cy={p.y} r="10" fill="#f59e0b" stroke="#111923" strokeWidth="3" /><text x={p.x} y={p.y + 3} textAnchor="middle" fill="#111923" fontSize="8" fontWeight="bold">R</text></g>
+              return <g key={crossing.id}><circle cx={p.x} cy={p.y} r="10" fill="#f59e0b" stroke="#f3f7f5" strokeWidth="3" /><text x={p.x} y={p.y + 3} textAnchor="middle" fill="#203744" fontSize="8" fontWeight="bold">R</text></g>
             })}
             {network.signals.map(signal => {
               const anchor = signal.direction === 'north' ? { x: 280, y: 216 } : signal.direction === 'south' ? { x: 220, y: 284 } : signal.direction === 'east' ? { x: 284, y: 280 } : { x: 216, y: 220 }
-              return <circle key={signal.id} cx={anchor.x} cy={anchor.y} r="5" fill="#fbbf24" stroke="#111923" strokeWidth="2" />
+              return <circle key={signal.id} cx={anchor.x} cy={anchor.y} r="5" fill="#fbbf24" stroke="#f3f7f5" strokeWidth="2" />
             })}
           </svg>
           <div className="mt-2 flex items-center justify-between text-[10px]">
@@ -218,12 +218,12 @@ export default function JunctionBuilderPreview() {
           <section className="rounded-xl border border-junction-border bg-junction-card p-4">
             <h3 className="text-xs font-bold uppercase tracking-wider text-white">Road segment editor</h3>
             <label className="mt-3 block text-[10px] text-junction-muted">Selected segment</label>
-            <select value={selectedEdgeId} onChange={event => setSelectedEdgeId(event.target.value)} className="mt-1 w-full rounded-md border border-junction-border bg-[#111923] p-2 text-xs text-white">
+            <select value={selectedEdgeId} onChange={event => setSelectedEdgeId(event.target.value)} className="mt-1 w-full rounded-md border border-junction-border bg-white p-2 text-xs text-junction-text">
               {network.edges.map(edge => <option key={edge.id} value={edge.id}>{edge.id} · {edge.fromNodeId} → {edge.toNodeId}</option>)}
             </select>
             {selectedEdge ? <div className="mt-3 grid grid-cols-2 gap-3">
-              <label className="text-[10px] text-junction-muted">Lanes<select value={selectedEdge.lanes.length} onChange={event => setLaneCount(selectedEdge, Number(event.target.value))} className="mt-1 w-full rounded-md border border-junction-border bg-[#111923] p-2 text-xs text-white"><option value={2}>2 · one each way</option><option value={4}>4 · two each way</option></select></label>
-              <label className="text-[10px] text-junction-muted">Speed limit<select value={selectedEdge.speedLimit} onChange={event => changeEdge(selectedEdge.id, edge => ({ ...edge, speedLimit: Number(event.target.value) }))} className="mt-1 w-full rounded-md border border-junction-border bg-[#111923] p-2 text-xs text-white">{[20, 30, 40, 50, 60].map(speed => <option key={speed} value={speed}>{speed} km/h</option>)}</select></label>
+              <label className="text-[10px] text-junction-muted">Lanes<select value={selectedEdge.lanes.length} onChange={event => setLaneCount(selectedEdge, Number(event.target.value))} className="mt-1 w-full rounded-md border border-junction-border bg-white p-2 text-xs text-junction-text"><option value={2}>2 · one each way</option><option value={4}>4 · two each way</option></select></label>
+              <label className="text-[10px] text-junction-muted">Speed limit<select value={selectedEdge.speedLimit} onChange={event => changeEdge(selectedEdge.id, edge => ({ ...edge, speedLimit: Number(event.target.value) }))} className="mt-1 w-full rounded-md border border-junction-border bg-white p-2 text-xs text-junction-text">{[20, 30, 40, 50, 60].map(speed => <option key={speed} value={speed}>{speed} km/h</option>)}</select></label>
               <button onClick={() => removeRoad(selectedEdge)} className="col-span-2 flex items-center justify-center gap-1.5 rounded-md border border-red-500/20 bg-red-500/5 py-2 text-[10px] text-red-300 hover:bg-red-500/10"><Trash2 className="h-3.5 w-3.5" />Remove selected segment</button>
             </div> : <p className="mt-2 text-[10px] text-junction-muted">Add a road segment to begin editing.</p>}
             <div className="mt-4 border-t border-junction-border pt-3">
@@ -237,18 +237,12 @@ export default function JunctionBuilderPreview() {
               </button>
               <p className="mt-1 text-[9px] text-junction-muted">Vehicles stop at the crossing during a user-triggered warning and closure cycle.</p>
             </div>
-            <div className="mt-3 border-t border-junction-border pt-3">
-              <button onClick={() => setNetwork({ ...network, metroEnabled: !network.metroEnabled })} aria-pressed={Boolean(network.metroEnabled)} className={`w-full rounded-md border px-2.5 py-2 text-[10px] ${network.metroEnabled ? 'border-junction-accent/40 bg-junction-accent/10 text-junction-accent' : 'border-junction-border text-junction-muted'}`}>
-                {network.metroEnabled ? 'Remove elevated metro layer' : 'Add elevated metro layer'}
-              </button>
-              <p className="mt-1 text-[9px] text-junction-muted">Metro supports and track stay above ground-level traffic.</p>
-            </div>
           </section>
 
           <section className="rounded-xl border border-junction-border bg-junction-card p-4">
             <div className="flex items-center justify-between"><h3 className="text-xs font-bold uppercase tracking-wider text-white">Intersection signals</h3><span className="text-[9px] text-junction-muted">{center?.id || 'no intersection'}</span></div>
             <div className="mt-2 flex flex-wrap gap-1.5">{network.signals.map(signal => <button key={signal.id} onClick={() => setSelectedSignalId(signal.id)} className={`rounded-md border px-2 py-1 text-[10px] uppercase ${selectedSignalId === signal.id ? 'border-junction-accent/50 bg-junction-accent/10 text-junction-accent' : 'border-junction-border text-junction-muted'}`}>{signal.direction}</button>)}</div>
-            {selectedSignal && <label className="mt-3 block text-[10px] text-junction-muted">Controlled road<select value={selectedSignal.controlsEdgeId} onChange={event => updateSignalEdge(event.target.value)} className="mt-1 w-full rounded-md border border-junction-border bg-[#111923] p-2 text-xs text-white">{signalEdges.map(edge => <option key={edge.id} value={edge.id}>{edge.id} · {getEndpointDirection(network, edge)}</option>)}</select></label>}
+            {selectedSignal && <label className="mt-3 block text-[10px] text-junction-muted">Controlled road<select value={selectedSignal.controlsEdgeId} onChange={event => updateSignalEdge(event.target.value)} className="mt-1 w-full rounded-md border border-junction-border bg-white p-2 text-xs text-junction-text">{signalEdges.map(edge => <option key={edge.id} value={edge.id}>{edge.id} · {getEndpointDirection(network, edge)}</option>)}</select></label>}
             {missingSignals.length > 0 && <div className="mt-3 flex gap-1.5">{missingSignals.map(direction => <button key={direction} onClick={() => addSignal(direction)} disabled={!signalEdges.some(edge => getEndpointDirection(network, edge) === direction)} className="rounded-md border border-junction-border px-2 py-1 text-[9px] uppercase text-junction-accent disabled:opacity-30">+ {direction}</button>)}</div>}
           </section>
         </aside>

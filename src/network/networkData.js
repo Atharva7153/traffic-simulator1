@@ -141,7 +141,6 @@ export function createDefaultJunction() {
       { id: 'sig_west', nodeId: 'center', controlsEdgeId: 'road_west', direction: 'west', state: 'green' },
     ],
     railwayCrossings: [],
-    metroEnabled: false,
   }
 
   return network
