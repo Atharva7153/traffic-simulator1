@@ -121,7 +121,7 @@ export default function RailwayCrossing() {
       {[-4.15, 4.15].map((offset, index) => (
         <group key={`barrier-${offset}`} position={[-5.1, 0.72, RAIL_Z + offset]}>
           <mesh position={[0, -0.35, 0]}><boxGeometry args={[0.55, 0.75, 0.55]} /><meshStandardMaterial color="#4b5563" /></mesh>
-          <group ref={index === 0 ? northGate : southGate} rotation={[0, 0, Math.PI / 2]}>
+          <group ref={index === 0 ? northGate : southGate} rotation={[0, 0, closed ? 0 : Math.PI / 2]}>
             <mesh position={[5.1, 0, 0]} castShadow>
               <boxGeometry args={[10.5, 0.2, 0.22]} />
               <meshStandardMaterial color="#f3f4f6" />
