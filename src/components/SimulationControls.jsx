@@ -6,11 +6,16 @@ import { motion } from 'motion/react'
 import { useSimulation } from '../simulation/useSimulation'
 
 export default function SimulationControls() {
-  const { isRunning, toggleRunning, reset, spawnRate, setSpawnRate, elapsedTime } = useSimulation()
+  const {
+    isRunning, toggleRunning, reset, spawnRate, setSpawnRate, elapsedTime,
+    controllerMode, setControllerMode, simSpeed, setSimSpeed, phase, phaseRemaining,
+    railwayCrossings, crossingState, crossingRemaining, startRailwayCycle,
+  } = useSimulation()
 
   const formatTime = (seconds) => {
-    const m = Math.floor(seconds / 60).toString().padStart(2, '0')
-    const s = (seconds % 60).toString().padStart(2, '0')
+    const total = Math.floor(seconds)
+    const m = Math.floor(total / 60).toString().padStart(2, '0')
+    const s = (total % 60).toString().padStart(2, '0')
     return `${m}:${s}`
   }
 
@@ -44,7 +49,7 @@ export default function SimulationControls() {
           }`}
         >
           {isRunning ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
-          {isRunning ? 'Pause' : 'Start'}
+          {isRunning ? 'Pause' : elapsedTime > 0 ? 'Resume' : 'Start'}
         </button>
         <button
           onClick={reset}
@@ -53,6 +58,29 @@ export default function SimulationControls() {
           <RotateCcw className="w-3.5 h-3.5" />
           Reset
         </button>
+      </div>
+
+      <div className="mb-3 rounded-md bg-black/20 p-2.5">
+        <div className="flex items-center justify-between text-[10px] uppercase tracking-wider">
+          <span className="text-junction-muted">{phase.replaceAll('_', ' ')}</span>
+          <span className="font-mono font-bold text-white">{Math.ceil(phaseRemaining)}s</span>
+        </div>
+        <div className="mt-2 grid grid-cols-2 gap-1 rounded-md bg-black/30 p-1">
+          {['fixed', 'adaptive'].map((mode) => (
+            <button
+              key={mode}
+              onClick={() => setControllerMode(mode)}
+              aria-pressed={controllerMode === mode}
+              className={`rounded px-2 py-1 text-[10px] font-semibold capitalize transition-colors ${
+                controllerMode === mode
+                  ? 'bg-junction-accent text-junction-dark'
+                  : 'text-junction-muted hover:text-white'
+              }`}
+            >
+              {mode}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Spawn Rate Slider */}
@@ -90,12 +118,45 @@ export default function SimulationControls() {
         </div>
       </div>
 
-      {/* Phase 2 notice */}
-      <div className="mt-3 p-2 rounded bg-junction-accent/5 border border-junction-accent/10">
-        <p className="text-[9px] text-junction-muted leading-relaxed">
-          Phase 1 demo — signals cycle automatically when running. Full vehicle simulation and adaptive control coming in Phase 2.
-        </p>
+      <div className="mt-3">
+        <div className="flex items-center justify-between mb-1.5">
+          <span className="text-[10px] font-medium text-junction-muted uppercase tracking-wider">Simulation speed</span>
+          <span className="text-xs font-bold text-junction-accent">{simSpeed}×</span>
+        </div>
+        <div className="grid grid-cols-3 gap-1">
+          {[1, 2, 4].map((speed) => (
+            <button
+              key={speed}
+              onClick={() => setSimSpeed(speed)}
+              aria-pressed={simSpeed === speed}
+              className={`rounded-md border py-1 text-[10px] font-medium ${
+                simSpeed === speed
+                  ? 'border-junction-accent/50 bg-junction-accent/15 text-junction-accent'
+                  : 'border-junction-border text-junction-muted hover:text-white'
+              }`}
+            >
+              {speed}×
+            </button>
+          ))}
+        </div>
       </div>
+
+      {railwayCrossings.length > 0 && (
+        <div className="mt-3 rounded-md border border-junction-amber/20 bg-junction-amber/5 p-2.5">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-junction-amber">Rail crossing · {crossingState}</span>
+            {crossingState !== 'open' && <span className="font-mono text-[10px] text-white">{Math.ceil(crossingRemaining)}s</span>}
+          </div>
+          <button
+            onClick={startRailwayCycle}
+            disabled={!isRunning || crossingState !== 'open'}
+            className="mt-2 w-full rounded border border-junction-amber/30 bg-black/20 py-1.5 text-[10px] text-junction-amber disabled:opacity-40"
+          >
+            {isRunning ? 'Begin warning → closure cycle' : 'Start simulation to cycle crossing'}
+          </button>
+          <p className="mt-1 text-[9px] leading-relaxed text-junction-muted">Manual warning (3s), closure (8s), then reopen. No train actor is simulated.</p>
+        </div>
+      )}
     </motion.div>
   )
 }

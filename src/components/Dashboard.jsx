@@ -49,7 +49,8 @@ function DirectionLegend() {
 }
 
 export default function Dashboard() {
-  const { stats, activeView, viewMode, setViewMode } = useSimulation()
+  const { stats, activeView, viewMode, setViewMode, elapsedTime } = useSimulation()
+  const waitValue = stats.avgWaitTimeSec === null ? '--' : stats.avgWaitTimeSec.toFixed(1)
 
   // Tab views
   if (activeView === 'builder') {
@@ -121,29 +122,29 @@ export default function Dashboard() {
         <div className="grid grid-cols-2 gap-2">
           <StatCard
             icon={Car}
-            label="Vehicles"
-            value={stats.totalVehicles}
-            unit="active"
-            pending={stats.totalVehicles === 0}
+            label="Passed"
+            value={stats.totalPassed}
+            unit="vehicles"
           />
           <StatCard
             icon={Timer}
             label="Avg Wait"
-            value={stats.avgWaitTime}
+            value={waitValue}
             unit="sec"
-            pending={stats.avgWaitTime === '--'}
+            pending={waitValue === '--'}
           />
           <StatCard
             icon={TrendingUp}
             label="Throughput"
-            value={stats.throughput}
+            value={stats.throughputPerMinute.toFixed(1)}
             unit="v/min"
-            pending={stats.throughput === '--'}
+            pending={elapsedTime === 0}
           />
           <StatCard
             icon={AlertTriangle}
             label="Congestion"
             value={stats.congestionLevel}
+            pending={elapsedTime === 0}
           />
         </div>
 

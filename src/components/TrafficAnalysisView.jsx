@@ -1,48 +1,88 @@
-/**
- * TrafficAnalysisView.jsx — AI Traffic Intelligence & Analytics dashboard.
- * Evaluates traffic measurements, compares morning/evening scenarios,
- * and generates recommended green-time allocations using deterministic optimization.
- */
-import { useState, useMemo } from 'react'
-import { Brain, Cpu, Zap, Layers, Sliders } from 'lucide-react'
+/** Local traffic analysis based on simulation measurements and explicit demand profiles. */
+import { useMemo, useState } from 'react'
+import { Activity, Brain, Cpu, Play, Timer, TrafficCone, Zap } from 'lucide-react'
 import { useSimulation } from '../simulation/useSimulation'
-import { SCENARIO_PRESETS, calculateOptimalTiming } from '../analysis/trafficAnalysis'
+import { SCENARIO_PRESETS, calculateOptimalTiming, runStrategyComparison } from '../analysis/trafficAnalysis'
+import { getDirectionalSpeedLimits } from '../network/networkData'
+
+const DIRECTIONS = ['north', 'south', 'east', 'west']
+const TYPES = [
+  { key: 'sedan', label: 'Cars', color: 'bg-blue-500' },
+  { key: 'suv', label: 'SUVs', color: 'bg-red-500' },
+  { key: 'bus', label: 'Buses', color: 'bg-amber-500' },
+  { key: 'auto', label: 'Autos', color: 'bg-emerald-500' },
+]
+const APPROACH_MIX = [
+  { key: 'cars', color: 'bg-blue-500' },
+  { key: 'buses', color: 'bg-amber-500' },
+  { key: 'autos', color: 'bg-emerald-500' },
+]
+
+function Metric({ label, value, suffix = '' }) {
+  return (
+    <div className="rounded-lg border border-white/5 bg-black/20 p-3">
+      <div className="text-[9px] uppercase tracking-wider text-junction-muted">{label}</div>
+      <div className="mt-1 text-lg font-bold text-white tabular-nums">{value}<span className="ml-1 text-[10px] font-normal text-junction-muted">{suffix}</span></div>
+    </div>
+  )
+}
+
+function formatMetric(value, digits = 1) {
+  return value === null || !Number.isFinite(value) ? '—' : value.toFixed(digits)
+}
+
+function loadComparison() {
+  try {
+    return typeof window === 'undefined' ? null : JSON.parse(window.sessionStorage.getItem('swayambhu-signal-comparison'))
+  } catch {
+    return null
+  }
+}
 
 export default function TrafficAnalysisView() {
-  const { setView } = useSimulation()
-  const [selectedScenarioKey, setSelectedScenarioKey] = useState('morning_rush')
-  const [totalCycleTime, setTotalCycleTime] = useState(60)
+  const {
+    setView, demandScenario, setDemandScenario, approaches, stats, elapsedTime,
+    spawnRate, controllerMode, setControllerMode, railwayCrossings, network,
+  } = useSimulation()
+  const [comparison, setComparison] = useState(loadComparison)
+  const [comparing, setComparing] = useState(false)
+  const activeScenario = SCENARIO_PRESETS[demandScenario]
+  const recommendation = useMemo(() => calculateOptimalTiming(approaches, 34), [approaches])
+  const passedTypeTotal = Object.values(stats.composition).reduce((sum, count) => sum + count, 0)
 
-  const activeScenario = SCENARIO_PRESETS[selectedScenarioKey]
-
-  // Calculate optimization recommendation
-  const recommendation = useMemo(() => {
-    return calculateOptimalTiming(activeScenario.measurements, totalCycleTime)
-  }, [activeScenario, totalCycleTime])
-
-  // Fixed baseline: equal 50/50 split minus amber
-  const fixedSplit = useMemo(() => {
-    const amber = 3
-    const green = Math.floor((totalCycleTime - amber * 2) / 2)
-    return { nsGreen: green, ewGreen: green, amber }
-  }, [totalCycleTime])
+  const compare = () => {
+    setComparing(true)
+    requestAnimationFrame(() => {
+      const result = runStrategyComparison({
+        scenario: demandScenario,
+        spawnRate,
+        durationSec: 180,
+        crossingDirections: railwayCrossings.map(crossing => crossing.direction),
+        speedLimits: getDirectionalSpeedLimits(network),
+      })
+      setComparison(result)
+      try {
+        window.sessionStorage.setItem('swayambhu-signal-comparison', JSON.stringify(result))
+      } catch {
+        // Results remain visible in the current view without browser storage.
+      }
+      setComparing(false)
+    })
+  }
 
   return (
     <div className="flex-1 flex flex-col p-6 overflow-y-auto bg-junction-dark">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between pb-6 border-b border-junction-border gap-4">
+      <div className="flex flex-col md:flex-row md:items-center justify-between pb-5 border-b border-junction-border gap-4">
         <div>
           <div className="flex items-center gap-2 text-junction-accent text-xs font-semibold uppercase tracking-wider">
             <Brain className="w-4 h-4" />
-            <span>AI Signal Intelligence & Analytics Engine</span>
+            <span>Local Traffic Intelligence</span>
           </div>
-          <h2 className="text-xl font-bold text-white mt-1">Adaptive Signal Optimization</h2>
+          <h2 className="text-xl font-bold text-white mt-1">Measured demand & signal timing</h2>
           <p className="text-xs text-junction-muted mt-1 max-w-2xl">
-            Simulated Passenger Car Unit (PCU) demand analyzer. Generates dynamic green-split recommendations
-            based on multi-modal queue density and time-of-day flow patterns.
+            Queue, wait, and vehicle counts come from this run. Scenario profiles only shape future arrivals; they are not observed city data.
           </p>
         </div>
-
         <button
           onClick={() => setView('simulation')}
           className="self-start md:self-auto px-3.5 py-1.5 rounded-lg text-xs font-medium bg-junction-accent/15 text-junction-accent border border-junction-accent/30 hover:bg-junction-accent/25 transition-colors"
@@ -51,179 +91,149 @@ export default function TrafficAnalysisView() {
         </button>
       </div>
 
-      {/* Scenario Selector & Controls */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 my-6">
-        {Object.entries(SCENARIO_PRESETS).map(([key, item]) => {
-          const isSelected = selectedScenarioKey === key
-          return (
-            <button
-              key={key}
-              onClick={() => setSelectedScenarioKey(key)}
-              className={`p-4 rounded-xl text-left border transition-all ${
-                isSelected
-                  ? 'bg-junction-accent/10 border-junction-accent ring-1 ring-junction-accent/40'
-                  : 'bg-junction-card border-junction-border hover:border-white/20'
-              }`}
-            >
-              <div className="flex items-center justify-between">
-                <span className={`text-xs font-bold uppercase tracking-wider ${isSelected ? 'text-junction-accent' : 'text-junction-text'}`}>
-                  {item.name}
-                </span>
-                {isSelected && <span className="w-2 h-2 rounded-full bg-junction-accent animate-pulse" />}
-              </div>
-              <p className="text-[11px] text-junction-muted mt-1 leading-relaxed">
-                {item.description}
-              </p>
-            </button>
-          )
-        })}
-      </div>
-
-      {/* Interactive Cycle Length Controller */}
-      <div className="bg-junction-card border border-junction-border rounded-xl p-4 mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-2">
-          <Sliders className="w-4 h-4 text-junction-accent" />
-          <span className="text-xs font-bold text-white uppercase tracking-wider">Total Cycle Window:</span>
-          <span className="text-sm font-mono font-bold text-junction-accent">{totalCycleTime}s</span>
+      <section className="my-5">
+        <div className="mb-2 flex items-center gap-2">
+          <Activity className="h-4 w-4 text-junction-accent" />
+          <h3 className="text-xs font-bold uppercase tracking-wider text-white">Arrival scenario</h3>
+          <span className="text-[10px] text-junction-muted">Assumed directional shares for generated vehicles</span>
         </div>
-        <div className="flex items-center gap-3 w-full sm:w-72">
-          <span className="text-[10px] text-junction-muted">40s</span>
-          <input
-            type="range"
-            min={40}
-            max={120}
-            step={5}
-            value={totalCycleTime}
-            onChange={(e) => setTotalCycleTime(Number(e.target.value))}
-            className="w-full h-1.5 rounded-full appearance-none cursor-pointer bg-junction-border accent-cyan-500"
-          />
-          <span className="text-[10px] text-junction-muted">120s</span>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          {Object.entries(SCENARIO_PRESETS).map(([key, scenario]) => {
+            const selected = key === demandScenario
+            return (
+              <button
+                key={key}
+                onClick={() => setDemandScenario(key)}
+                aria-pressed={selected}
+                className={`rounded-xl border p-4 text-left transition-colors ${selected ? 'border-junction-accent bg-junction-accent/10' : 'border-junction-border bg-junction-card hover:border-white/20'}`}
+              >
+                <span className={`text-xs font-bold ${selected ? 'text-junction-accent' : 'text-white'}`}>{scenario.name}</span>
+                <p className="mt-1 text-[11px] leading-relaxed text-junction-muted">{scenario.description}</p>
+                <div className="mt-3 flex gap-2 text-[9px] uppercase tracking-wider text-junction-muted">
+                  {DIRECTIONS.map((direction) => (
+                    <span key={direction}>{direction[0]} {Math.round(scenario.demandWeights[direction] * 100)}%</span>
+                  ))}
+                </div>
+              </button>
+            )
+          })}
         </div>
-      </div>
+      </section>
 
-      {/* Simulation Inputs & Measured Metrics */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-        {/* Measured Approach Density */}
-        <div className="bg-junction-card border border-junction-border rounded-xl p-5">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
-              <Layers className="w-4 h-4 text-junction-accent" />
-              <span>Observed Approach Telemetry</span>
-            </h3>
-            <span className="text-[10px] text-junction-muted">Scenario: {activeScenario.name}</span>
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
+        <section className="rounded-xl border border-junction-border bg-junction-card p-4">
+          <div className="mb-3 flex items-center justify-between">
+            <div>
+              <h3 className="text-xs font-bold uppercase tracking-wider text-white">Live approach measurements</h3>
+              <p className="mt-1 text-[10px] text-junction-muted">{elapsedTime.toFixed(1)} simulation seconds · {activeScenario.name} profile</p>
+            </div>
+            <span className="rounded border border-junction-border px-2 py-1 text-[9px] uppercase text-junction-muted">from this run</span>
           </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            {activeScenario.measurements.map(m => (
-              <div key={m.direction} className="p-3 rounded-lg bg-black/20 border border-white/5">
+          <div className="grid grid-cols-2 gap-2">
+            {approaches.map((approach) => (
+              <div key={approach.direction} className="rounded-lg border border-white/5 bg-black/20 p-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-white uppercase">{m.direction} Approach</span>
-                  <span className="text-[10px] text-junction-accent font-medium">Wait: ~{m.avgWaitTimeSec}s</span>
+                  <span className="text-xs font-bold uppercase text-white">{approach.direction}</span>
+                  <span className="text-[10px] text-junction-muted">{approach.arrivalsObserved} arrived</span>
                 </div>
-                <div className="flex items-baseline gap-2 mt-2">
-                  <span className="text-xl font-bold text-white">{m.queueLength}</span>
-                  <span className="text-[10px] text-junction-muted">queued veh</span>
+                <div className="mt-2 flex items-baseline gap-1">
+                  <span className="text-xl font-bold text-white">{approach.queueLength}</span>
+                  <span className="text-[10px] text-junction-muted">queued</span>
+                  <span className="ml-auto text-[10px] text-junction-accent">{approach.avgWaitTimeSec.toFixed(1)}s avg wait</span>
                 </div>
-                {/* Vehicle modal composition bar */}
-                <div className="mt-2.5">
-                  <div className="flex justify-between text-[9px] text-junction-muted mb-1">
-                    <span>Cars {m.composition.cars}%</span>
-                    <span>Buses {m.composition.buses}%</span>
-                    <span>2W/Autos {m.composition.twoWheelers + m.composition.autos}%</span>
-                  </div>
-                  <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden flex">
-                    <div style={{ width: `${m.composition.cars}%` }} className="bg-blue-500" />
-                    <div style={{ width: `${m.composition.buses}%` }} className="bg-amber-500" />
-                    <div style={{ width: `${m.composition.twoWheelers + m.composition.autos}%` }} className="bg-emerald-500" />
-                  </div>
+                <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/5 flex" title="Current active vehicle mix on this approach">
+                  {APPROACH_MIX.map(({ key, color }) => (
+                    <div key={key} className={color} style={{ width: `${approach.composition[key]}%` }} />
+                  ))}
                 </div>
               </div>
             ))}
           </div>
-        </div>
-
-        {/* Fixed vs Adaptive Comparison Card */}
-        <div className="bg-junction-card border border-junction-border rounded-xl p-5 flex flex-col justify-between">
-          <div>
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
-                <Zap className="w-4 h-4 text-junction-green" />
-                <span>Fixed vs. Adaptive AI Timing Comparison</span>
-              </h3>
-              <span className="text-[10px] px-2 py-0.5 rounded bg-junction-green/10 text-junction-green border border-junction-green/20">
-                {recommendation.estimatedImprovement}
-              </span>
+          <div className="mt-3 rounded-lg border border-white/5 bg-black/20 p-3">
+            <div className="mb-2 flex items-center justify-between">
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-junction-muted">Passed vehicle mix</span>
+              <span className="text-[10px] text-junction-muted">{passedTypeTotal} completed vehicles</span>
             </div>
-
-            {/* Visual Split Bars */}
-            <div className="space-y-4">
-              {/* Fixed Baseline */}
-              <div>
-                <div className="flex justify-between text-xs text-junction-muted mb-1.5">
-                  <span className="font-medium text-white/80">Static Fixed Cycle (50/50)</span>
-                  <span>NS: {fixedSplit.nsGreen}s · EW: {fixedSplit.ewGreen}s</span>
-                </div>
-                <div className="h-4 w-full bg-black/40 rounded-md overflow-hidden flex text-[10px] font-bold text-black text-center leading-4">
-                  <div style={{ width: `${(fixedSplit.nsGreen / totalCycleTime) * 100}%` }} className="bg-blue-400">
-                    NS ({fixedSplit.nsGreen}s)
-                  </div>
-                  <div style={{ width: `${(fixedSplit.amber / totalCycleTime) * 100}%` }} className="bg-amber-400">
-                    A
-                  </div>
-                  <div style={{ width: `${(fixedSplit.ewGreen / totalCycleTime) * 100}%` }} className="bg-emerald-400">
-                    EW ({fixedSplit.ewGreen}s)
-                  </div>
-                  <div style={{ width: `${(fixedSplit.amber / totalCycleTime) * 100}%` }} className="bg-amber-400">
-                    A
-                  </div>
-                </div>
-              </div>
-
-              {/* Recommended Adaptive */}
-              <div>
-                <div className="flex justify-between text-xs text-junction-muted mb-1.5">
-                  <span className="font-medium text-junction-accent">AI Recommended Dynamic Split</span>
-                  <span className="text-white font-medium">
-                    NS: {recommendation.phaseAllocation.nsGreenSec}s · EW: {recommendation.phaseAllocation.ewGreenSec}s
-                  </span>
-                </div>
-                <div className="h-4 w-full bg-black/40 rounded-md overflow-hidden flex text-[10px] font-bold text-black text-center leading-4 ring-1 ring-junction-accent/40">
-                  <div style={{ width: `${(recommendation.phaseAllocation.nsGreenSec / totalCycleTime) * 100}%` }} className="bg-cyan-400 transition-all duration-500">
-                    NS ({recommendation.phaseAllocation.nsGreenSec}s)
-                  </div>
-                  <div style={{ width: `${(recommendation.phaseAllocation.nsAmberSec / totalCycleTime) * 100}%` }} className="bg-amber-400">
-                    A
-                  </div>
-                  <div style={{ width: `${(recommendation.phaseAllocation.ewGreenSec / totalCycleTime) * 100}%` }} className="bg-emerald-400 transition-all duration-500">
-                    EW ({recommendation.phaseAllocation.ewGreenSec}s)
-                  </div>
-                  <div style={{ width: `${(recommendation.phaseAllocation.ewAmberSec / totalCycleTime) * 100}%` }} className="bg-amber-400">
-                    A
-                  </div>
-                </div>
-              </div>
+            <div className="flex h-2 overflow-hidden rounded-full bg-white/5">
+              {TYPES.map(({ key, color }) => (
+                <div key={key} className={color} style={{ width: `${passedTypeTotal ? (stats.composition[key] / passedTypeTotal) * 100 : 0}%` }} />
+              ))}
+            </div>
+            <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[9px] text-junction-muted">
+              {TYPES.map(({ key, label }) => <span key={key}>{label} {stats.composition[key]}</span>)}
             </div>
           </div>
+          {elapsedTime === 0 && <p className="mt-3 text-[10px] text-junction-amber">Start the simulation to collect measured queues and arrivals.</p>}
+        </section>
 
-          {/* AI Decision Rationale */}
-          <div className="mt-4 p-3 rounded-lg bg-black/30 border border-white/5">
-            <span className="text-[10px] text-junction-accent font-semibold uppercase tracking-wider block mb-1">
-              Optimization Analysis & Rationale
-            </span>
-            <p className="text-xs text-junction-muted leading-relaxed">
-              {recommendation.reasoning}
-            </p>
+        <section className="rounded-xl border border-junction-border bg-junction-card p-4">
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <div>
+              <h3 className="text-xs font-bold uppercase tracking-wider text-white">Measured signal split</h3>
+              <p className="mt-1 text-[10px] text-junction-muted">Adaptive controller uses current queues and arrivals · 34s target cycle</p>
+            </div>
+            <div className="flex rounded-md bg-black/30 p-1">
+              {['fixed', 'adaptive'].map((mode) => (
+                <button key={mode} onClick={() => setControllerMode(mode)} aria-pressed={controllerMode === mode}
+                  className={`rounded px-2 py-1 text-[10px] capitalize ${controllerMode === mode ? 'bg-junction-accent text-junction-dark' : 'text-junction-muted'}`}>
+                  {mode}
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
+          <div className="space-y-4">
+            <div>
+              <div className="mb-1 flex justify-between text-[10px] text-junction-muted"><span>Fixed baseline</span><span>NS 13s · EW 13s green</span></div>
+              <div className="flex h-4 overflow-hidden rounded bg-black/40"><div className="bg-blue-400" style={{ width: `${13 / 34 * 100}%` }} /><div className="bg-amber-400" style={{ width: `${3 / 34 * 100}%` }} /><div className="bg-emerald-400" style={{ width: `${13 / 34 * 100}%` }} /><div className="bg-amber-400" style={{ width: `${3 / 34 * 100}%` }} /><div className="bg-slate-600" style={{ width: `${2 / 34 * 100}%` }} /></div>
+            </div>
+            <div>
+              <div className="mb-1 flex justify-between text-[10px] text-junction-muted"><span>Adaptive allocation from current measurements</span><span>NS {recommendation.phaseAllocation.nsGreenSec}s · EW {recommendation.phaseAllocation.ewGreenSec}s</span></div>
+              <div className="flex h-4 overflow-hidden rounded bg-black/40 ring-1 ring-junction-accent/30"><div className="bg-cyan-400" style={{ width: `${recommendation.phaseAllocation.nsGreenSec / 34 * 100}%` }} /><div className="bg-amber-400" style={{ width: `${3 / 34 * 100}%` }} /><div className="bg-emerald-400" style={{ width: `${recommendation.phaseAllocation.ewGreenSec / 34 * 100}%` }} /><div className="bg-amber-400" style={{ width: `${3 / 34 * 100}%` }} /><div className="bg-slate-600" style={{ width: `${2 / 34 * 100}%` }} /></div>
+            </div>
+          </div>
+          <p className="mt-4 rounded-lg border border-white/5 bg-black/20 p-3 text-xs leading-relaxed text-junction-muted">{recommendation.reasoning}</p>
+          <div className="mt-3 flex items-center gap-2 text-[10px] text-junction-muted"><TrafficCone className="h-3.5 w-3.5 text-junction-amber" />Both axes keep at least 8 seconds green; amber and all-red clearance remain active.</div>
+        </section>
       </div>
 
-      {/* Safety & API Notice */}
-      <div className="p-3 rounded-xl bg-junction-card border border-junction-border flex items-center justify-between text-xs text-junction-muted">
-        <div className="flex items-center gap-2">
-          <Cpu className="w-4 h-4 text-junction-accent" />
-          <span>Deterministic Local Optimization Mode active. No external API keys required. Ready for Groq/LLM integration in Phase 2.</span>
+      <section className="mt-5 rounded-xl border border-junction-border bg-junction-card p-4">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+          <div>
+            <h3 className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-white"><Zap className="h-4 w-4 text-junction-green" />Fixed vs adaptive run comparison</h3>
+            <p className="mt-1 text-[10px] text-junction-muted">Same seed, spawn rate, open crossing layout, and {activeScenario.name.toLowerCase()} demand profile · 180 simulated seconds per strategy.</p>
+          </div>
+          <button onClick={compare} disabled={comparing} className="flex items-center justify-center gap-2 rounded-lg border border-junction-accent/30 bg-junction-accent/10 px-3 py-2 text-xs font-semibold text-junction-accent disabled:opacity-60">
+            {comparing ? <Timer className="h-3.5 w-3.5 animate-pulse" /> : <Play className="h-3.5 w-3.5" />}
+            {comparing ? 'Running comparison…' : 'Run comparison'}
+          </button>
         </div>
-        <span className="text-[10px] font-mono text-junction-green">Engine: PCU-Webster Local</span>
+        {comparison ? (
+          <div className="mt-4">
+            <p className="mb-2 text-[9px] font-semibold uppercase tracking-wider text-junction-green">Completed simulation results · {comparison.durationSec}s each · captured under “{SCENARIO_PRESETS[comparison.demandProfile].name}”</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {['fixed', 'adaptive'].map((key) => {
+                const result = comparison[key]
+                return (
+                  <div key={key} className="rounded-lg border border-white/5 bg-black/20 p-3">
+                    <div className="mb-2 text-xs font-bold capitalize text-white">{key} timing</div>
+                    <div className="grid grid-cols-3 gap-2">
+                      <Metric label="Passed" value={result.vehiclesPassed} />
+                      <Metric label="Avg wait" value={formatMetric(result.averageWaitTimeSec)} suffix="s" />
+                      <Metric label="Avg queue" value={formatMetric(result.averageQueue)} suffix="per approach" />
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        ) : (
+          <p className="mt-3 text-[10px] text-junction-muted">No comparison run has been recorded yet. Results appear here after both simulations finish.</p>
+        )}
+      </section>
+
+      <div className="mt-4 flex items-center gap-2 rounded-xl border border-junction-border bg-black/20 p-3 text-[10px] text-junction-muted">
+        <Cpu className="h-4 w-4 text-junction-accent" />
+        Deterministic local analysis only. Demand percentages are scenario assumptions; queue, wait, composition, and comparison metrics are measured in this simulator.
       </div>
     </div>
   )

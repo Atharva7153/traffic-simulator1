@@ -4,7 +4,7 @@
  * Consumes the same shared simulation state as the 3D view.
  *
  * Draws: roads, lane markings, stop lines, zebra crossings, signal indicators,
- *        direction labels, and placeholder vehicle positions.
+ *        direction labels, and vehicles from the shared simulation model.
  */
 import { useRef, useEffect, useCallback } from 'react'
 import { useSimulation } from '../simulation/useSimulation'
@@ -17,41 +17,11 @@ const HALF_J = JUNCTION / 2
 const HALF_R = ROAD_W / 2
 
 // Colors
-const C = {
-  bg:        '#0f1520',
-  asphalt:   '#23262e',
-  marking:   '#d4d4c8',
-  markDim:   'rgba(212,212,200,0.35)',
-  zebra:     'rgba(212,212,200,0.55)',
-  curb:      '#4b5563',
-  sidewalk:  '#1e222d',
-  red:       '#ef4444',
-  amber:     '#f59e0b',
-  green:     '#22c55e',
-  labelText: '#06b6d4',
-  info:      'rgba(100,116,139,0.7)',
+const PALETTES = {
+  day: { bg: '#e5efe8', asphalt: '#3b4245', marking: '#fafaf6', markDim: 'rgba(250,250,246,0.42)', zebra: 'rgba(250,250,246,0.72)', curb: '#b7c2bc', sidewalk: '#d4ded7', red: '#dc2626', amber: '#d97706', green: '#16a34a', labelText: '#0f766e', info: 'rgba(46,67,72,0.8)' },
+  sunset: { bg: '#f2e4d4', asphalt: '#484342', marking: '#fffaf0', markDim: 'rgba(255,250,240,0.4)', zebra: 'rgba(255,250,240,0.68)', curb: '#c7b4a0', sidewalk: '#e5d3bf', red: '#dc2626', amber: '#c66a08', green: '#15803d', labelText: '#a64b2a', info: 'rgba(75,58,48,0.8)' },
+  night: { bg: '#17232c', asphalt: '#303b42', marking: '#dce5e8', markDim: 'rgba(220,229,232,0.32)', zebra: 'rgba(220,229,232,0.52)', curb: '#53636c', sidewalk: '#29363e', red: '#fb5555', amber: '#f6ba49', green: '#4ade80', labelText: '#67e8f9', info: 'rgba(203,213,225,0.72)' },
 }
-
-// Placeholder vehicle positions (same layout as 3D scene, scaled)
-const DEMO_VEHICLES = [
-  // North approach (heading south, so y < 0)
-  { x: 12, y: -(HALF_J + 35), w: 8, h: 18, color: '#3b82f6', rot: 0 },
-  { x: 12, y: -(HALF_J + 60), w: 9, h: 20, color: '#f8fafc', rot: 0 },
-  { x: 12, y: -(HALF_J + 85), w: 7, h: 14, color: '#15803d', rot: 0 },
-  { x: -12, y: -(HALF_J + 45), w: 8, h: 18, color: '#dc2626', rot: 0 },
-  // South approach
-  { x: -12, y: (HALF_J + 40), w: 8, h: 18, color: '#6b21a8', rot: Math.PI },
-  { x: -12, y: (HALF_J + 65), w: 7, h: 14, color: '#15803d', rot: Math.PI },
-  { x: 12, y: (HALF_J + 50), w: 9, h: 20, color: '#0f766e', rot: Math.PI },
-  // East approach
-  { x: (HALF_J + 60), y: 12, w: 18, h: 38, color: '#b91c1c', rot: 0, isBus: true },
-  { x: (HALF_J + 35), y: 12, w: 8, h: 18, color: '#ea580c', rot: 0 },
-  { x: (HALF_J + 40), y: -12, w: 7, h: 14, color: '#15803d', rot: 0 },
-  // West approach
-  { x: -(HALF_J + 40), y: -12, w: 8, h: 18, color: '#374151', rot: 0 },
-  { x: -(HALF_J + 65), y: -12, w: 8, h: 18, color: '#fbbf24', rot: 0 },
-  { x: -(HALF_J + 48), y: 12, w: 9, h: 20, color: '#1e40af', rot: 0 },
-]
 
 function drawRoundedRect(ctx, x, y, w, h, r) {
   ctx.beginPath()
@@ -71,12 +41,28 @@ export default function TopDownCanvas() {
   const canvasRef = useRef(null)
   const containerRef = useRef(null)
   const animRef = useRef(null)
-  const { signals } = useSimulation()
+  const { signals, vehicles, isRunning, railwayCrossings, crossingState, environmentMode } = useSimulation()
   const signalsRef = useRef(signals)
+  const vehiclesRef = useRef(vehicles)
+  const runningRef = useRef(isRunning)
+  const crossingsRef = useRef(railwayCrossings)
+  const crossingStateRef = useRef(crossingState)
+  const environmentRef = useRef(environmentMode)
 
   useEffect(() => {
     signalsRef.current = signals
   }, [signals])
+
+  useEffect(() => {
+    vehiclesRef.current = vehicles
+    runningRef.current = isRunning
+  }, [vehicles, isRunning])
+
+  useEffect(() => {
+    crossingsRef.current = railwayCrossings
+    crossingStateRef.current = crossingState
+    environmentRef.current = environmentMode
+  }, [railwayCrossings, crossingState, environmentMode])
 
   const draw = useCallback((canvas, ctx) => {
     const dpr = window.devicePixelRatio || 1
@@ -90,7 +76,7 @@ export default function TopDownCanvas() {
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
 
     // Clear
-    ctx.fillStyle = C.bg
+    ctx.fillStyle = colors.bg
     ctx.fillRect(0, 0, cw, ch)
 
     // Center origin
@@ -104,10 +90,11 @@ export default function TopDownCanvas() {
     ctx.scale(scale, scale)
 
     const sig = signalsRef.current
+    const colors = PALETTES[environmentRef.current] || PALETTES.day
 
     // --- Sidewalk corners ---
     const cornerSize = ARM_LEN - 10
-    ctx.fillStyle = C.sidewalk
+    ctx.fillStyle = colors.sidewalk
     for (const [sx, sy] of [[-1,-1],[1,-1],[-1,1],[1,1]]) {
       drawRoundedRect(ctx, sx * (HALF_J + 2), sy * (HALF_J + 2),
         sx * cornerSize, sy * cornerSize, 0)
@@ -115,7 +102,7 @@ export default function TopDownCanvas() {
     }
 
     // --- Road surfaces ---
-    ctx.fillStyle = C.asphalt
+    ctx.fillStyle = colors.asphalt
     // North arm
     ctx.fillRect(-HALF_R, -(HALF_J + ARM_LEN), ROAD_W, ARM_LEN)
     // South arm
@@ -128,7 +115,7 @@ export default function TopDownCanvas() {
     ctx.fillRect(-HALF_J - 2, -HALF_J - 2, JUNCTION + 4, JUNCTION + 4)
 
     // --- Curbs ---
-    ctx.strokeStyle = C.curb
+    ctx.strokeStyle = colors.curb
     ctx.lineWidth = 2
     // NS curbs
     for (const xSign of [-1, 1]) {
@@ -154,7 +141,7 @@ export default function TopDownCanvas() {
     }
 
     // --- Dashed center lines ---
-    ctx.strokeStyle = C.marking
+    ctx.strokeStyle = colors.marking
     ctx.lineWidth = 1.5
     ctx.setLineDash([8, 5])
     // NS
@@ -168,7 +155,7 @@ export default function TopDownCanvas() {
     ctx.setLineDash([])
 
     // --- Edge lines (dim) ---
-    ctx.strokeStyle = C.markDim
+    ctx.strokeStyle = colors.markDim
     ctx.lineWidth = 0.8
     // NS edge lines
     for (const x of [-HALF_R + 3, HALF_R - 3]) {
@@ -182,7 +169,7 @@ export default function TopDownCanvas() {
     }
 
     // --- Stop lines ---
-    ctx.strokeStyle = C.marking
+    ctx.strokeStyle = colors.marking
     ctx.lineWidth = 2.5
     const stopOff = HALF_J + 3
     // N stop line
@@ -195,7 +182,7 @@ export default function TopDownCanvas() {
     ctx.beginPath(); ctx.moveTo(-stopOff, -HALF_R + 3); ctx.lineTo(-stopOff, HALF_R - 3); ctx.stroke()
 
     // --- Zebra crossings ---
-    ctx.fillStyle = C.zebra
+    ctx.fillStyle = colors.zebra
     const zebraOff = HALF_J + 10
     const stripeW = 5
     const stripeCount = 6
@@ -219,7 +206,7 @@ export default function TopDownCanvas() {
     const sigRadius = 5
     const sigOff = HALF_J + 4
     const drawSignal = (x, y, state) => {
-      const col = state === 'green' ? C.green : state === 'amber' ? C.amber : C.red
+      const col = state === 'green' ? colors.green : state === 'amber' ? colors.amber : colors.red
       // Glow
       ctx.beginPath()
       ctx.arc(x, y, sigRadius + 4, 0, Math.PI * 2)
@@ -242,38 +229,76 @@ export default function TopDownCanvas() {
     drawSignal(sigOff, HALF_R + 5, sig.east)      // East signal
     drawSignal(-sigOff, -(HALF_R + 5), sig.west)  // West signal
 
+    // --- Optional railway crossings ---
+    const railColors = { open: colors.green, warning: colors.amber, closed: colors.red }
+    for (const crossing of crossingsRef.current) {
+      const position = crossing.direction === 'north' ? [0, -23] : crossing.direction === 'south' ? [0, 23]
+        : crossing.direction === 'east' ? [23, 0] : [-23, 0]
+      const x = position[0] * 5
+      const y = position[1] * 5
+      const vertical = crossing.direction === 'north' || crossing.direction === 'south'
+      ctx.strokeStyle = '#cbd5e1'
+      ctx.lineWidth = 2
+      if (vertical) {
+        for (const offset of [-4, 4]) { ctx.beginPath(); ctx.moveTo(x - HALF_R, y + offset); ctx.lineTo(x + HALF_R, y + offset); ctx.stroke() }
+      } else {
+        for (const offset of [-4, 4]) { ctx.beginPath(); ctx.moveTo(x + offset, y - HALF_R); ctx.lineTo(x + offset, y + HALF_R); ctx.stroke() }
+      }
+      ctx.strokeStyle = railColors[crossingStateRef.current] || colors.green
+      ctx.lineWidth = 3
+      if (vertical) {
+        for (const offset of [-8, 8]) { ctx.beginPath(); ctx.moveTo(x - HALF_R + 3, y + offset); ctx.lineTo(x + HALF_R - 3, y + offset); ctx.stroke() }
+      } else {
+        for (const offset of [-8, 8]) { ctx.beginPath(); ctx.moveTo(x + offset, y - HALF_R + 3); ctx.lineTo(x + offset, y + HALF_R - 3); ctx.stroke() }
+      }
+    }
     // --- Direction labels ---
     ctx.font = 'bold 14px Inter, system-ui, sans-serif'
     ctx.textAlign = 'center'
     ctx.textBaseline = 'middle'
-    ctx.fillStyle = C.labelText
+    ctx.fillStyle = colors.labelText
     ctx.fillText('N', 0, -(HALF_J + ARM_LEN + 12))
     ctx.fillText('S', 0, HALF_J + ARM_LEN + 12)
     ctx.fillText('E', HALF_J + ARM_LEN + 12, 0)
     ctx.fillText('W', -(HALF_J + ARM_LEN + 12), 0)
 
-    // --- Demo vehicles ---
-    for (const v of DEMO_VEHICLES) {
+    // --- Vehicles from the shared model (world units scaled to canvas units) ---
+    for (const v of vehiclesRef.current) {
+      const vertical = v.direction === 'north' || v.direction === 'south'
+      const w = (vertical ? v.width : v.length) * 5
+      const h = (vertical ? v.length : v.width) * 5
+      const x = v.x * 5
+      const y = v.z * 5
       ctx.save()
-      ctx.translate(v.x, v.y)
-      if (v.rot) ctx.rotate(v.rot)
+      ctx.translate(x, y)
       ctx.fillStyle = v.color
-      const hw = (v.isBus ? v.h : v.w) / 2
-      const hh = (v.isBus ? v.w : v.h) / 2
-      drawRoundedRect(ctx, -hw, -hh, hw * 2, hh * 2, 2)
+      drawRoundedRect(ctx, -w / 2, -h / 2, w, h, Math.min(3, w / 4))
       ctx.fill()
-      // Windshield hint
+      if (v.type === 'ambulance') {
+        ctx.strokeStyle = '#dc2626'
+        ctx.lineWidth = 1
+        ctx.stroke()
+        ctx.fillStyle = '#dc2626'
+        ctx.fillRect(-w / 2, -h / 2 + h * 0.42, w, Math.max(2, h * 0.1))
+      }
+      // Small highlight toward the leading end of the vehicle.
       ctx.fillStyle = 'rgba(147,197,253,0.3)'
-      ctx.fillRect(-hw + 1.5, -hh + 2, hw * 2 - 3, 3)
+      if (v.direction === 'north') ctx.fillRect(-w / 2 + 2, -h / 2 + 2, w - 4, Math.max(2, h * 0.16))
+      else if (v.direction === 'south') ctx.fillRect(-w / 2 + 2, h / 2 - Math.max(2, h * 0.16) - 2, w - 4, Math.max(2, h * 0.16))
+      else if (v.direction === 'east') ctx.fillRect(-w / 2 + 2, -h / 2 + 2, Math.max(2, w * 0.16), h - 4)
+      else ctx.fillRect(w / 2 - Math.max(2, w * 0.16) - 2, -h / 2 + 2, Math.max(2, w * 0.16), h - 4)
       ctx.restore()
     }
 
     // --- Info text ---
     ctx.font = '10px Inter, system-ui, sans-serif'
-    ctx.fillStyle = C.info
+    ctx.fillStyle = colors.info
     ctx.textAlign = 'left'
     const infoY = (HALF_J + ARM_LEN + 8)
-    ctx.fillText('Phase 1 — Static demo layout. Vehicles are placeholders.', -(HALF_J + ARM_LEN), infoY + 20)
+    ctx.fillText(
+      `${runningRef.current ? 'LIVE' : 'PAUSED'} · ${vehiclesRef.current.length} active vehicles · straight-through movements`,
+      -(HALF_J + ARM_LEN), infoY + 20,
+    )
 
     ctx.restore()
   }, [])

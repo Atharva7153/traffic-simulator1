@@ -28,7 +28,7 @@ function SignalDot({ color, isActive }) {
   )
 }
 
-function DirectionSignal({ label, short, signalState }) {
+function DirectionSignal({ label, short, signalState, queueLength }) {
   const cfg = SIGNAL_COLORS[signalState]
   return (
     <div className="flex items-center gap-3 py-2 px-3 rounded-md bg-black/20">
@@ -41,6 +41,9 @@ function DirectionSignal({ label, short, signalState }) {
           {signalState}
         </div>
       </div>
+      <span className="rounded bg-white/5 px-1.5 py-0.5 font-mono text-[10px] text-junction-muted" title="Vehicles currently queued">
+        {queueLength}
+      </span>
       <div className="flex flex-col gap-1">
         <SignalDot color="red" isActive={signalState === 'red'} />
         <SignalDot color="amber" isActive={signalState === 'amber'} />
@@ -51,7 +54,7 @@ function DirectionSignal({ label, short, signalState }) {
 }
 
 export default function SignalPanel() {
-  const { signals } = useSimulation()
+  const { signals, queues, phase, phaseRemaining, controllerMode } = useSimulation()
 
   return (
     <motion.div
@@ -63,6 +66,12 @@ export default function SignalPanel() {
       <h3 className="text-xs font-semibold text-junction-muted uppercase tracking-wider mb-2">
         Signal Status
       </h3>
+      <div className="mb-2 flex items-center justify-between rounded-md border border-junction-border bg-black/20 px-2.5 py-1.5">
+        <span className="text-[9px] font-semibold uppercase tracking-wider text-junction-muted">
+          {controllerMode} · {phase.replaceAll('_', ' ')}
+        </span>
+        <span className="font-mono text-xs font-bold text-white">{Math.ceil(phaseRemaining)}s</span>
+      </div>
       <div className="flex flex-col gap-1.5">
         {DIRECTIONS.map(({ key, label, short }) => (
           <DirectionSignal
@@ -70,6 +79,7 @@ export default function SignalPanel() {
             label={label}
             short={short}
             signalState={signals[key]}
+            queueLength={queues[key]}
           />
         ))}
       </div>

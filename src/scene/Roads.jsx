@@ -3,6 +3,7 @@
  * Includes asphalt, lane markings, stop lines, zebra crossings, and curbs.
  */
 import { useMemo } from 'react'
+import { useSimulation } from '../simulation/useSimulation'
 
 const ROAD_WIDTH = 12
 const ROAD_LENGTH = 40
@@ -117,7 +118,66 @@ function LaneMarkings({ position, rotation, roadLength }) {
   )
 }
 
+function RailwayCrossing({ direction, state }) {
+  const vertical = direction === 'north' || direction === 'south'
+  const positions = { north: [0, -23], south: [0, 23], east: [23, 0], west: [-23, 0] }
+  const [x, z] = positions[direction]
+  const trackSize = vertical ? [12, 0.12, 0.16] : [0.16, 0.12, 12]
+  const barrierSize = vertical ? [10, 0.16, 0.25] : [0.25, 0.16, 10]
+  const barrierHeight = state === 'closed' ? 0.9 : state === 'warning' ? 2.2 : 3.5
+  const stateColor = state === 'closed' ? '#ef4444' : state === 'warning' ? '#f59e0b' : '#22c55e'
+
+  return (
+    <group position={[x, 0, z]}>
+      {[-0.8, 0.8].map(offset => (
+        <mesh key={`rail-${offset}`} position={vertical ? [0, 0.12, offset] : [offset, 0.12, 0]}>
+          <boxGeometry args={trackSize} />
+          <meshStandardMaterial color="#cbd5e1" metalness={0.65} roughness={0.35} />
+        </mesh>
+      ))}
+      {[-2.2, 2.2].map(offset => (
+        <mesh key={`sleeper-${offset}`} position={vertical ? [0, 0.1, offset] : [offset, 0.1, 0]}>
+          <boxGeometry args={vertical ? [12, 0.08, 0.28] : [0.28, 0.08, 12]} />
+          <meshStandardMaterial color="#6b4f3b" roughness={0.8} />
+        </mesh>
+      ))}
+      {[-1.5, 1.5].map(offset => (
+        <group key={`gate-${offset}`} position={vertical ? [0, 0, offset] : [offset, 0, 0]}>
+          <mesh position={[0, barrierHeight, 0]}>
+            <boxGeometry args={barrierSize} />
+            <meshStandardMaterial color={stateColor} emissive={stateColor} emissiveIntensity={0.25} />
+          </mesh>
+          <mesh position={[0, 1.3, 0]}>
+            <boxGeometry args={[0.55, 2.6, 0.55]} />
+            <meshStandardMaterial color="#374151" metalness={0.5} />
+          </mesh>
+          <mesh position={[0, 2.8, 0]}>
+            <boxGeometry args={[0.7, 0.7, 0.7]} />
+            <meshStandardMaterial color={stateColor} emissive={stateColor} emissiveIntensity={0.6} />
+          </mesh>
+        </group>
+      ))}
+    </group>
+  )
+}
+
+function MetroLayer() {
+  return (
+    <group>
+      <mesh position={[-1.1, 8, 0]}><boxGeometry args={[0.35, 0.32, 92]} /><meshStandardMaterial color="#60a5fa" metalness={0.45} roughness={0.35} /></mesh>
+      <mesh position={[1.1, 8, 0]}><boxGeometry args={[0.35, 0.32, 92]} /><meshStandardMaterial color="#60a5fa" metalness={0.45} roughness={0.35} /></mesh>
+      {[-36, -18, 0, 18, 36].map(z => [-1, 1].map(side => (
+        <mesh key={`${z}-${side}`} position={[side * 5.5, 4.1, z]}>
+          <cylinderGeometry args={[0.28, 0.42, 8.2, 8]} />
+          <meshStandardMaterial color="#64748b" roughness={0.8} />
+        </mesh>
+      )))}
+    </group>
+  )
+}
+
 export default function Roads() {
+  const { network, crossingState } = useSimulation()
   const armLength = ROAD_LENGTH
   const offset = JUNCTION_SIZE / 2 + armLength / 2
 
@@ -173,6 +233,11 @@ export default function Roads() {
       <SidewalkBlock position={[JUNCTION_SIZE / 2 + 8, 0.05, -(JUNCTION_SIZE / 2 + 8)]} size={[16, 0.15, 16]} />
       <SidewalkBlock position={[-(JUNCTION_SIZE / 2 + 8), 0.05, JUNCTION_SIZE / 2 + 8]} size={[16, 0.15, 16]} />
       <SidewalkBlock position={[JUNCTION_SIZE / 2 + 8, 0.05, JUNCTION_SIZE / 2 + 8]} size={[16, 0.15, 16]} />
+
+      {(network.railwayCrossings || []).map(crossing => (
+        <RailwayCrossing key={crossing.id} direction={crossing.direction} state={crossingState} />
+      ))}
+      {network.metroEnabled && <MetroLayer />}
     </group>
   )
 }

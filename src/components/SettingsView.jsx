@@ -65,19 +65,24 @@ export default function SettingsView() {
           </div>
         </div>
 
-        {/* Phase 2 Settings Notice */}
+        {/* Active model capabilities */}
         <div className="bg-junction-card border border-junction-border rounded-xl p-5 space-y-3">
           <div className="flex items-center gap-2 text-white font-semibold text-sm">
             <Sliders className="w-4 h-4 text-junction-accent" />
-            <span>Simulation Physics & Timing Parameters</span>
+            <span>Active simulation model</span>
           </div>
           <p className="text-xs text-junction-muted leading-relaxed">
-            Additional physical tuning options (collision braking distance, driver reaction delay,
-            yellow light dilemma zone tolerance) will be enabled when the Phase 2 physics engine is loaded.
+            Fixed-step traffic updates at 30 steps per simulated second. Vehicles keep a safe following gap and use the configured arm speed limit as a cap.
           </p>
-          <div className="pt-2 flex items-center gap-2 text-xs text-junction-green">
+          <div className="grid grid-cols-2 gap-2 text-[10px] text-junction-muted">
+            <div className="rounded-md border border-white/5 bg-black/20 p-2">Straight-through routes</div>
+            <div className="rounded-md border border-white/5 bg-black/20 p-2">3s amber + 1s all-red</div>
+            <div className="rounded-md border border-white/5 bg-black/20 p-2">Sedan, SUV, bus, auto</div>
+            <div className="rounded-md border border-white/5 bg-black/20 p-2">No turn routing</div>
+          </div>
+          <div className="pt-1 flex items-center gap-2 text-xs text-junction-green">
             <CheckCircle2 className="w-4 h-4" />
-            <span>Phase 1.5 Architecture Validated</span>
+            <span>Local model · no external service</span>
           </div>
         </div>
       </div>

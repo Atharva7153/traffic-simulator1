@@ -1,22 +1,9 @@
 /**
  * Vehicles.jsx — Procedural vehicle models placed on roads.
- * Includes sedan, SUV, bus, and auto-rickshaw silhouettes.
- * Phase 1: vehicles are stationary, positioned in sensible orientations.
+ * Includes Indian road vehicles and a dispatched ambulance driven by the shared
+ * simulation snapshot.
  */
-import { useMemo } from 'react'
-import { JUNCTION_SIZE } from './Roads'
-
-// Color palettes for vehicles
-const CAR_COLORS = ['#1e40af', '#dc2626', '#f8fafc', '#0f766e', '#6b21a8', '#ea580c', '#374151', '#fbbf24']
-const BUS_COLORS = ['#b91c1c', '#1d4ed8', '#047857']
-
-function seededRandom(seed) {
-  let s = seed
-  return () => {
-    s = (s * 16807) % 2147483647
-    return (s - 1) / 2147483646
-  }
-}
+import { useSimulation } from '../simulation/useSimulation'
 
 /** Sedan — a compact car shape */
 function Sedan({ position, rotation, color }) {
@@ -179,6 +166,85 @@ function AutoRickshaw({ position, rotation, color = '#15803d' }) {
   )
 }
 
+function Motorcycle({ position, rotation, color }) {
+  return (
+    <group position={position} rotation={rotation}>
+      <mesh position={[0, 0.42, 0]}>
+        <boxGeometry args={[0.32, 0.28, 1.2]} />
+        <meshStandardMaterial color={color} roughness={0.72} />
+      </mesh>
+      <mesh position={[0, 0.62, 0.08]} rotation={[0.12, 0, 0]}>
+        <boxGeometry args={[0.48, 0.28, 0.5]} />
+        <meshStandardMaterial color="#d97706" roughness={0.55} />
+      </mesh>
+      <mesh position={[0, 0.78, -0.35]}>
+        <boxGeometry args={[0.38, 0.14, 0.38]} />
+        <meshStandardMaterial color="#111827" roughness={0.8} />
+      </mesh>
+      {[-0.72, 0.72].map(z => (
+        <mesh key={z} position={[0, 0.22, z]} rotation={[0, 0, Math.PI / 2]}>
+          <cylinderGeometry args={[0.24, 0.24, 0.12, 12]} />
+          <meshStandardMaterial color="#111827" roughness={0.9} />
+        </mesh>
+      ))}
+      <mesh position={[0, 0.6, 0.73]}>
+        <sphereGeometry args={[0.12, 10, 8]} />
+        <meshStandardMaterial color="#fff7cc" emissive="#fff1a8" emissiveIntensity={0.8} />
+      </mesh>
+      <mesh position={[0, 1.2, -0.05]}>
+        <sphereGeometry args={[0.2, 10, 8]} />
+        <meshStandardMaterial color="#1e293b" roughness={0.55} />
+      </mesh>
+      <mesh position={[0, 0.93, -0.02]}>
+        <capsuleGeometry args={[0.16, 0.38, 4, 8]} />
+        <meshStandardMaterial color="#2563eb" roughness={0.8} />
+      </mesh>
+    </group>
+  )
+}
+
+function Ambulance({ position, rotation }) {
+  return (
+    <group position={position} rotation={rotation}>
+      <mesh position={[0, 0.7, 0]} castShadow>
+        <boxGeometry args={[2, 1.25, 4.6]} />
+        <meshStandardMaterial color="#f8fafc" roughness={0.55} />
+      </mesh>
+      <mesh position={[0, 1.42, -0.15]} castShadow>
+        <boxGeometry args={[1.82, 0.82, 2.55]} />
+        <meshStandardMaterial color="#ffffff" roughness={0.5} />
+      </mesh>
+      <mesh position={[0, 1.4, 1.14]}>
+        <boxGeometry args={[1.55, 0.58, 0.04]} />
+        <meshStandardMaterial color="#a8d7eb" roughness={0.25} metalness={0.1} />
+      </mesh>
+      {[-1.01, 1.01].map(side => (
+        <group key={side} position={[side, 0.96, -0.25]}>
+          <mesh><boxGeometry args={[0.04, 0.58, 0.2]} /><meshStandardMaterial color="#dc2626" /></mesh>
+          <mesh><boxGeometry args={[0.04, 0.2, 0.58]} /><meshStandardMaterial color="#dc2626" /></mesh>
+          <mesh position={[0, -0.49, 0.45]}><boxGeometry args={[0.05, 0.18, 1.65]} /><meshStandardMaterial color="#dc2626" /></mesh>
+        </group>
+      ))}
+      {[[-0.92, 0.2, 1.45], [0.92, 0.2, 1.45], [-0.92, 0.2, -1.45], [0.92, 0.2, -1.45]].map((pos, index) => (
+        <mesh key={index} position={pos} rotation={[0, 0, Math.PI / 2]}>
+          <cylinderGeometry args={[0.28, 0.28, 0.18, 12]} />
+          <meshStandardMaterial color="#111827" roughness={0.9} />
+        </mesh>
+      ))}
+      <mesh position={[-0.38, 1.95, 0]}>
+        <boxGeometry args={[0.42, 0.16, 0.24]} />
+        <meshStandardMaterial color="#ef4444" emissive="#ef4444" emissiveIntensity={2} />
+      </mesh>
+      <mesh position={[0.38, 1.95, 0]}>
+        <boxGeometry args={[0.42, 0.16, 0.24]} />
+        <meshStandardMaterial color="#2563eb" emissive="#2563eb" emissiveIntensity={2} />
+      </mesh>
+      <mesh position={[-0.68, 0.68, 2.31]}><boxGeometry args={[0.4, 0.18, 0.04]} /><meshStandardMaterial color="#fff7cc" emissive="#fff7cc" emissiveIntensity={0.8} /></mesh>
+      <mesh position={[0.68, 0.68, 2.31]}><boxGeometry args={[0.4, 0.18, 0.04]} /><meshStandardMaterial color="#fff7cc" emissive="#fff7cc" emissiveIntensity={0.8} /></mesh>
+    </group>
+  )
+}
+
 /** SUV — slightly larger than sedan */
 function SUV({ position, rotation, color }) {
   return (
@@ -228,49 +294,27 @@ function SUV({ position, rotation, color }) {
 }
 
 export default function Vehicles() {
-  const vehicles = useMemo(() => {
-    const rng = seededRandom(42)
-    const pick = (arr) => arr[Math.floor(rng() * arr.length)]
-    const jOff = JUNCTION_SIZE / 2
-
-    return [
-      // === NORTH APPROACH (coming from -Z, heading +Z) ===
-      // Right lane (x ≈ +2.5)
-      { type: 'sedan', pos: [2.5, 0, -(jOff + 8)], rot: [0, 0, 0], color: pick(CAR_COLORS) },
-      { type: 'suv', pos: [2.5, 0, -(jOff + 14)], rot: [0, 0, 0], color: pick(CAR_COLORS) },
-      { type: 'auto', pos: [2.5, 0, -(jOff + 20)], rot: [0, 0, 0] },
-      // Left lane (x ≈ -2.5) — incoming in same direction
-      { type: 'sedan', pos: [-2.5, 0, -(jOff + 10)], rot: [0, 0, 0], color: pick(CAR_COLORS) },
-
-      // === SOUTH APPROACH (coming from +Z, heading -Z) ===
-      { type: 'sedan', pos: [-2.5, 0, jOff + 9], rot: [0, Math.PI, 0], color: pick(CAR_COLORS) },
-      { type: 'auto', pos: [-2.5, 0, jOff + 15], rot: [0, Math.PI, 0] },
-      { type: 'suv', pos: [2.5, 0, jOff + 12], rot: [0, Math.PI, 0], color: pick(CAR_COLORS) },
-
-      // === EAST APPROACH (coming from +X, heading -X) ===
-      { type: 'bus', pos: [jOff + 14, 0, 2.5], rot: [0, -Math.PI / 2, 0], color: pick(BUS_COLORS) },
-      { type: 'sedan', pos: [jOff + 8, 0, 2.5], rot: [0, -Math.PI / 2, 0], color: pick(CAR_COLORS) },
-      { type: 'auto', pos: [jOff + 9, 0, -2.5], rot: [0, -Math.PI / 2, 0] },
-
-      // === WEST APPROACH (coming from -X, heading +X) ===
-      { type: 'sedan', pos: [-(jOff + 9), 0, -2.5], rot: [0, Math.PI / 2, 0], color: pick(CAR_COLORS) },
-      { type: 'sedan', pos: [-(jOff + 15), 0, -2.5], rot: [0, Math.PI / 2, 0], color: pick(CAR_COLORS) },
-      { type: 'suv', pos: [-(jOff + 11), 0, 2.5], rot: [0, Math.PI / 2, 0], color: pick(CAR_COLORS) },
-    ]
-  }, [])
+  const { vehicles } = useSimulation()
+  const rotations = { north: 0, south: Math.PI, east: -Math.PI / 2, west: Math.PI / 2 }
 
   return (
     <group>
-      {vehicles.map((v, i) => {
+      {vehicles.map((v) => {
+        const position = [v.x, 0, v.z]
+        const rotation = [0, rotations[v.direction], 0]
         switch (v.type) {
           case 'sedan':
-            return <Sedan key={i} position={v.pos} rotation={v.rot} color={v.color} />
+            return <Sedan key={v.id} position={position} rotation={rotation} color={v.color} />
           case 'suv':
-            return <SUV key={i} position={v.pos} rotation={v.rot} color={v.color} />
+            return <SUV key={v.id} position={position} rotation={rotation} color={v.color} />
           case 'bus':
-            return <Bus key={i} position={v.pos} rotation={v.rot} color={v.color} />
+            return <Bus key={v.id} position={position} rotation={rotation} color={v.color} />
           case 'auto':
-            return <AutoRickshaw key={i} position={v.pos} rotation={v.rot} />
+            return <AutoRickshaw key={v.id} position={position} rotation={rotation} color={v.color} />
+          case 'motorcycle':
+            return <Motorcycle key={v.id} position={position} rotation={rotation} color={v.color} />
+          case 'ambulance':
+            return <Ambulance key={v.id} position={position} rotation={rotation} />
           default:
             return null
         }
