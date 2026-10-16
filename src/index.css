@@ -1,0 +1,59 @@
+@import "tailwindcss";
+
+/* Custom design tokens */
+@theme {
+  --color-junction-dark: #0a0f1a;
+  --color-junction-card: #111827;
+  --color-junction-border: #1e293b;
+  --color-junction-accent: #06b6d4;
+  --color-junction-accent-dim: #0e7490;
+  --color-junction-green: #10b981;
+  --color-junction-amber: #f59e0b;
+  --color-junction-red: #ef4444;
+  --color-junction-text: #e2e8f0;
+  --color-junction-muted: #64748b;
+}
+
+/* Base styles */
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+body {
+  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background-color: var(--color-junction-dark);
+  color: var(--color-junction-text);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-junction-border);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-junction-muted);
+}
+
+/* Canvas container */
+.canvas-container {
+  width: 100%;
+  height: 100%;
+}
+
+.canvas-container canvas {
+  display: block;
+}
