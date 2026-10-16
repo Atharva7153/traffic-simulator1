@@ -71,7 +71,7 @@ export default function Dashboard() {
   return (
     <div className="min-w-0 flex-1 flex overflow-hidden">
       {/* Main Viewport (3D or 2D Top-Down Canvas) */}
-      <div className="relative min-w-0 flex-1 bg-junction-dark">
+      <div className="relative min-w-0 flex-1 h-full bg-junction-dark overflow-hidden">
         {/* Render either 3D Three.js scene or 2D HTML Canvas */}
         {viewMode === '3d' ? (
           <JunctionScene />

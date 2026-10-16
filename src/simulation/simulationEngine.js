@@ -137,15 +137,15 @@ function isRailwayTrackOccupied(model, crossingDirections) {
 }
 
 function advanceRailwayCrossing(model, dt, config) {
-  if (!config.crossingDirections?.length) {
-    model.crossingState = 'open'
-    model.crossingRemaining = 0
+  if (config.crossingState) {
+    model.crossingState = config.crossingState
     return
   }
+  const directions = config.crossingDirections?.length ? config.crossingDirections : ['north']
   if (model.crossingState === 'open') return
   model.crossingRemaining = Math.max(0, model.crossingRemaining - dt)
   if (model.crossingState === 'warning' && model.crossingRemaining <= 1e-8) {
-    if (isRailwayTrackOccupied(model, config.crossingDirections)) return
+    if (isRailwayTrackOccupied(model, directions)) return
     model.crossingState = 'closed'
     model.crossingRemaining = RAIL_CLOSED_SECONDS
   } else if (model.crossingState === 'closed' && model.crossingRemaining <= 1e-8) {
@@ -422,8 +422,10 @@ function moveVehicles(model, dt, config) {
         const followingLimit = leader.progress - leader.length / 2 - vehicle.length / 2 - GAP
         target = Math.min(target, followingLimit)
       }
-      if (model.crossingState !== 'open' && config.crossingDirections?.length) {
-        for (const crossingDirection of config.crossingDirections) {
+      const isCrossingActive = model.crossingState !== 'open' || (config.crossingState && config.crossingState !== 'open')
+      const activeCrossingDirections = config.crossingDirections?.length ? config.crossingDirections : ['north']
+      if (isCrossingActive) {
+        for (const crossingDirection of activeCrossingDirections) {
           const crossingPosition = crossingPositionForRoute(direction, crossingDirection)
           if (crossingPosition === null) continue
           const crossingStop = crossingPosition - vehicle.length / 2 - 1.5

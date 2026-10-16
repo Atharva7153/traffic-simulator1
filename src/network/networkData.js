@@ -142,7 +142,9 @@ export function createDefaultJunction() {
       { id: 'sig_east', nodeId: 'center', controlsEdgeId: 'road_east', direction: 'east', state: 'green' },
       { id: 'sig_west', nodeId: 'center', controlsEdgeId: 'road_west', direction: 'west', state: 'green' },
     ],
-    railwayCrossings: [],
+    railwayCrossings: [
+      { id: 'crossing_north', edgeId: 'road_north', nodeId: 'center', direction: 'north', state: 'open' },
+    ],
   }
 
   return network

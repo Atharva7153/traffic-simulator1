@@ -60,13 +60,19 @@ export function SimulationProvider({ children }) {
 
   const configRef = useRef(null)
   useEffect(() => {
+    const activeCrossingState = railwayStatus === 'OPEN' ? 'open'
+      : (railwayStatus === 'WARNING' || railwayStatus === 'REOPENING' ? 'warning' : 'closed')
+
     configRef.current = {
       spawnRate,
       simSpeed,
       controllerMode,
       demandWeights: SCENARIO_PRESETS[demandScenario]?.demandWeights,
       speedLimits: getDirectionalSpeedLimits(network),
-      crossingDirections: (network.railwayCrossings || []).map(crossing => crossing.direction),
+      crossingDirections: (network.railwayCrossings && network.railwayCrossings.length > 0)
+        ? network.railwayCrossings.map(crossing => crossing.direction)
+        : ['north'],
+      crossingState: activeCrossingState,
       selectGreenDuration: (axis, measurements) => {
         if (controllerMode !== 'adaptive') return 13
         const recommendation = calculateOptimalTiming(measurements, 34)
@@ -75,7 +81,10 @@ export function SimulationProvider({ children }) {
           : recommendation.phaseAllocation.ewGreenSec
       },
     }
-  }, [spawnRate, simSpeed, controllerMode, demandScenario, network])
+    if (modelRef.current) {
+      modelRef.current.crossingState = activeCrossingState
+    }
+  }, [spawnRate, simSpeed, controllerMode, demandScenario, network, railwayStatus])
 
   useEffect(() => {
     try {
@@ -111,6 +120,8 @@ export function SimulationProvider({ children }) {
     railwayPhaseElapsed.current = 0
     setRailwayProgress(0)
     setRailwayStatus('WARNING')
+    if (modelRef.current) modelRef.current.crossingState = 'warning'
+    if (configRef.current) configRef.current.crossingState = 'warning'
     setAutoTrainIn(45)
     return true
   }, [railwayStatus])
@@ -124,6 +135,18 @@ export function SimulationProvider({ children }) {
   const setView = useCallback((view) => setActiveView(view), [])
 
   useEffect(() => {
+    const stateMap = {
+      WARNING: 'warning',
+      CLOSED: 'closed',
+      'TRAIN PASSING': 'closed',
+      CLEARANCE: 'closed',
+      REOPENING: 'warning',
+      OPEN: 'open',
+    }
+    const currentCrossing = stateMap[railwayStatus] || 'open'
+    if (modelRef.current) modelRef.current.crossingState = currentCrossing
+    if (configRef.current) configRef.current.crossingState = currentCrossing
+
     if (railwayStatus === 'OPEN') return undefined
     railwayPhaseElapsed.current = 0
     const durations = { WARNING: 4, CLOSED: 1.5, 'TRAIN PASSING': 12, CLEARANCE: 1.5, REOPENING: 2 }
@@ -134,8 +157,12 @@ export function SimulationProvider({ children }) {
       if (elapsed < durations[railwayStatus]) return
       railwayPhaseElapsed.current = 0
       const next = { WARNING: 'CLOSED', CLOSED: 'TRAIN PASSING', 'TRAIN PASSING': 'CLEARANCE', CLEARANCE: 'REOPENING', REOPENING: 'OPEN' }
-      setRailwayStatus(next[railwayStatus])
-      if (next[railwayStatus] === 'OPEN') setRailwayProgress(0)
+      const nextStatus = next[railwayStatus]
+      setRailwayStatus(nextStatus)
+      const nextCrossing = stateMap[nextStatus] || 'open'
+      if (modelRef.current) modelRef.current.crossingState = nextCrossing
+      if (configRef.current) configRef.current.crossingState = nextCrossing
+      if (nextStatus === 'OPEN') setRailwayProgress(0)
     }, 100)
     return () => window.clearInterval(timer)
   }, [railwayStatus])

@@ -1,149 +1,537 @@
-import { useRef } from 'react'
+import { useMemo, useRef } from 'react'
 import { MathUtils } from 'three'
 import { useFrame } from '@react-three/fiber'
 import { useSimulation } from '../simulation/useSimulation'
+import { getBallastTexture } from './textures'
 
-const RAIL_Z = -23
+export const RAIL_Z = -23
 const ACTIVE = ['WARNING', 'CLOSED', 'TRAIN PASSING', 'CLEARANCE']
 
-function Coach({ x, locomotive = false }) {
-  const body = locomotive ? '#174a78' : '#b91c36'
-  const windows = locomotive ? '#b9e7f2' : '#d9f4f5'
-  const wheelXs = locomotive ? [-2.6, 2.2] : [-2.5, 2.5]
+/** Detailed Train Coach with interior glow and realistic bogie wheel trucks */
+function Coach({ x, locomotive = false, isLast = false, mode = 'day' }) {
+  const isNight = mode === 'night'
+  const isSunset = mode === 'sunset'
+  const windowGlow = isNight ? '#fef08a' : isSunset ? '#fed7aa' : '#b9e7f2'
+  const windowIntensity = isNight ? 1.5 : isSunset ? 0.6 : 0.15
+
+  const bodyColor = locomotive ? '#0f4c81' : '#f1f5f9'
+  const stripeColor = locomotive ? '#f59e0b' : '#0284c7'
+
   return (
     <group position={[x, 0, 0]}>
-      <mesh position={[0, 1.8, 0]} castShadow>
-        <boxGeometry args={[locomotive ? 7 : 7.4, 2.7, 2.45]} />
-        <meshStandardMaterial color={body} roughness={0.55} />
+      {/* Main coach body */}
+      <mesh position={[0, 1.85, 0]} castShadow>
+        <boxGeometry args={[locomotive ? 8.2 : 7.6, 2.7, 2.5]} />
+        <meshStandardMaterial color={bodyColor} metalness={0.4} roughness={0.45} />
       </mesh>
-      <mesh position={[0, 3.18, 0]} castShadow>
-        <boxGeometry args={[locomotive ? 6.8 : 7.1, 0.22, 2.55]} />
-        <meshStandardMaterial color="#d4d8dc" metalness={0.35} roughness={0.5} />
+
+      {/* Speed livery stripe along side */}
+      <mesh position={[0, 1.25, 0]}>
+        <boxGeometry args={[locomotive ? 8.25 : 7.65, 0.45, 2.53]} />
+        <meshStandardMaterial color={stripeColor} roughness={0.4} />
       </mesh>
-      <mesh position={[0, 0.57, 0]}>
-        <boxGeometry args={[locomotive ? 7.05 : 7.5, 0.18, 2.52]} />
-        <meshStandardMaterial color={locomotive ? '#f3bd36' : '#f3c53d'} />
+
+      {/* Roof with longitudinal aerodynamic ribs */}
+      <mesh position={[0, 3.25, 0]} castShadow>
+        <boxGeometry args={[locomotive ? 8.0 : 7.4, 0.25, 2.45]} />
+        <meshStandardMaterial color="#64748b" metalness={0.6} roughness={0.35} />
       </mesh>
-      {[-0.9, 0, 0.9].map((side) => (
-        <mesh key={`window-${side}`} position={[side * 2.15, 2.05, 1.235]}>
-          <boxGeometry args={[locomotive ? 0.9 : 1.1, 0.76, 0.035]} />
-          <meshStandardMaterial color={windows} metalness={0.25} roughness={0.25} />
+      {/* Roof AC modules */}
+      {[-1.8, 1.8].map((rx) => (
+        <mesh key={rx} position={[rx, 3.48, 0]} castShadow>
+          <boxGeometry args={[1.6, 0.24, 1.4]} />
+          <meshStandardMaterial color="#475569" metalness={0.5} roughness={0.5} />
         </mesh>
       ))}
-      {[-1, 1].map((side) => (
-        <mesh key={`window-back-${side}`} position={[side * 2.15, 2.05, -1.235]}>
-          <boxGeometry args={[locomotive ? 0.9 : 1.1, 0.76, 0.035]} />
-          <meshStandardMaterial color={windows} metalness={0.25} roughness={0.25} />
-        </mesh>
+
+      {/* Undercarriage dark chassis */}
+      <mesh position={[0, 0.55, 0]}>
+        <boxGeometry args={[locomotive ? 8.0 : 7.4, 0.22, 2.3]} />
+        <meshStandardMaterial color="#111827" roughness={0.9} />
+      </mesh>
+
+      {/* Passenger Window Rows with interior cabin glow */}
+      {!locomotive && (
+        <>
+          {[-2.2, -1.1, 0, 1.1, 2.2].map((wx) => (
+            <group key={`win-${wx}`}>
+              {/* Front side (+Z) */}
+              <mesh position={[wx, 2.05, 1.26]}>
+                <boxGeometry args={[0.85, 0.85, 0.04]} />
+                <meshStandardMaterial
+                  color={windowGlow}
+                  emissive={windowGlow}
+                  emissiveIntensity={windowIntensity}
+                  roughness={0.2}
+                />
+              </mesh>
+              {/* Back side (-Z) */}
+              <mesh position={[wx, 2.05, -1.26]}>
+                <boxGeometry args={[0.85, 0.85, 0.04]} />
+                <meshStandardMaterial
+                  color={windowGlow}
+                  emissive={windowGlow}
+                  emissiveIntensity={windowIntensity}
+                  roughness={0.2}
+                />
+              </mesh>
+            </group>
+          ))}
+        </>
+      )}
+
+      {/* Dual Bogie Wheel Trucks (4 wheels per bogie) */}
+      {[-2.3, 2.3].map((bogieX) => (
+        <group key={`bogie-${bogieX}`} position={[bogieX, 0, 0]}>
+          {/* Bogie frame */}
+          <mesh position={[0, 0.45, 0]}>
+            <boxGeometry args={[1.9, 0.22, 2.2]} />
+            <meshStandardMaterial color="#1e293b" metalness={0.7} roughness={0.5} />
+          </mesh>
+          {/* Wheels */}
+          {[-0.65, 0.65].flatMap((wx) =>
+            [-1.12, 1.12].map((wz) => (
+              <mesh key={`wheel-${wx}-${wz}`} position={[wx, 0.36, wz]} rotation={[Math.PI / 2, 0, 0]} castShadow>
+                <cylinderGeometry args={[0.36, 0.36, 0.16, 14]} />
+                <meshStandardMaterial color="#0f172a" metalness={0.8} roughness={0.3} />
+              </mesh>
+            ))
+          )}
+        </group>
       ))}
-      {wheelXs.flatMap((wx) => [-1.13, 1.13].map((z) => (
-        <mesh key={`wheel-${wx}-${z}`} position={[wx, 0.35, z]} rotation={[Math.PI / 2, 0, 0]} castShadow>
-          <cylinderGeometry args={[0.36, 0.36, 0.18, 12]} />
-          <meshStandardMaterial color="#20252a" roughness={0.85} />
-        </mesh>
-      )))}
+
+      {/* Locomotive Specific Details */}
       {locomotive && (
         <>
-          <mesh position={[3.65, 1.75, 0]}>
-            <boxGeometry args={[0.25, 1.35, 2.15]} />
-            <meshStandardMaterial color="#f2b934" />
+          {/* Aerodynamic windshield cab */}
+          <mesh position={[4.1, 2.1, 0]}>
+            <boxGeometry args={[0.35, 1.2, 2.2]} />
+            <meshStandardMaterial color="#38bdf8" roughness={0.1} metalness={0.8} />
           </mesh>
-          {[-0.68, 0.68].map((z) => (
-            <mesh key={z} position={[3.79, 2.15, z]}>
-              <cylinderGeometry args={[0.2, 0.2, 0.08, 12]} />
-              <meshStandardMaterial color="#fff5bd" emissive="#ffe896" emissiveIntensity={2} />
+
+          {/* Front Cowcatcher / Pilot plow */}
+          <mesh position={[4.2, 0.42, 0]}>
+            <boxGeometry args={[0.45, 0.35, 2.4]} />
+            <meshStandardMaterial color="#f59e0b" roughness={0.5} />
+          </mesh>
+
+          {/* High-intensity dual headlights */}
+          {[-0.7, 0.7].map((hz) => (
+            <mesh key={`hl-${hz}`} position={[4.15, 1.45, hz]}>
+              <cylinderGeometry args={[0.22, 0.22, 0.1, 14]} rotation={[0, 0, Math.PI / 2]} />
+              <meshStandardMaterial color="#ffffff" emissive="#fef08a" emissiveIntensity={3} />
             </mesh>
           ))}
-          <mesh position={[3.67, 0.5, 0]}><boxGeometry args={[0.4, 0.28, 1.8]} /><meshStandardMaterial color="#222831" /></mesh>
+          {/* Top center headlight */}
+          <mesh position={[4.05, 3.1, 0]}>
+            <cylinderGeometry args={[0.18, 0.18, 0.1, 14]} rotation={[0, 0, Math.PI / 2]} />
+            <meshStandardMaterial color="#ffffff" emissive="#fef08a" emissiveIntensity={3.5} />
+          </mesh>
+          {/* Headlight forward illumination beam */}
+          <pointLight position={[6, 1.8, 0]} color="#fff7cc" intensity={3} distance={28} decay={1.5} />
+
+          {/* Roof Pantograph (Electric current collector) */}
+          <group position={[-1.2, 3.4, 0]}>
+            <mesh position={[0, 0.35, 0]}>
+              <boxGeometry args={[1.2, 0.15, 1.1]} />
+              <meshStandardMaterial color="#b45309" metalness={0.8} roughness={0.3} />
+            </mesh>
+            <mesh position={[0, 1.1, 0]} rotation={[0, 0, 0.35]}>
+              <cylinderGeometry args={[0.04, 0.04, 1.6, 6]} />
+              <meshStandardMaterial color="#d97706" metalness={0.8} roughness={0.3} />
+            </mesh>
+            <mesh position={[0.4, 1.85, 0]} rotation={[0, 0, -Math.PI / 2]}>
+              <cylinderGeometry args={[0.05, 0.05, 1.8, 6]} />
+              <meshStandardMaterial color="#1e293b" metalness={0.9} roughness={0.2} />
+            </mesh>
+          </group>
+        </>
+      )}
+
+      {/* End coach red taillights */}
+      {isLast && (
+        <>
+          {[-0.7, 0.7].map((tz) => (
+            <mesh key={`tl-${tz}`} position={[-3.85, 1.45, tz]}>
+              <cylinderGeometry args={[0.16, 0.16, 0.08, 12]} rotation={[0, 0, Math.PI / 2]} />
+              <meshStandardMaterial color="#ef4444" emissive="#ef4444" emissiveIntensity={3} />
+            </mesh>
+          ))}
         </>
       )}
     </group>
   )
 }
 
-function CrossingSign({ position, active, materialRef }) {
+/** Level Crossing Warning Signal with dual alternating flashing red lights */
+function CrossingSignal({ position, active, flashAlt }) {
   return (
     <group position={position}>
-      <mesh position={[0, 1.25, 0]}><cylinderGeometry args={[0.07, 0.1, 2.5, 8]} /><meshStandardMaterial color="#4b5563" /></mesh>
-      <mesh position={[0, 2.35, 0]}><boxGeometry args={[0.9, 0.75, 0.15]} /><meshStandardMaterial color="#f4f5f0" /></mesh>
-      <mesh position={[0, 2.35, 0.09]} rotation={[0, 0, Math.PI / 4]}><boxGeometry args={[0.58, 0.08, 0.025]} /><meshStandardMaterial color="#b91c1c" /></mesh>
-      <mesh position={[0, 2.35, 0.1]} rotation={[0, 0, -Math.PI / 4]}><boxGeometry args={[0.58, 0.08, 0.025]} /><meshStandardMaterial color="#b91c1c" /></mesh>
-      <mesh position={[0.56, 1.7, 0]}>
-        <sphereGeometry args={[0.2, 12, 10]} />
-        <meshStandardMaterial ref={materialRef} color={active ? '#ef2929' : '#7f1d1d'} emissive="#ff1616" emissiveIntensity={active ? 2 : 0.05} />
+      {/* Steel pole */}
+      <mesh position={[0, 1.9, 0]}>
+        <cylinderGeometry args={[0.09, 0.12, 3.8, 8]} />
+        <meshStandardMaterial color="#475569" metalness={0.6} roughness={0.4} />
+      </mesh>
+
+      {/* Crossbuck sign: "X" RAILWAY CROSSING */}
+      <group position={[0, 3.4, 0]}>
+        <mesh rotation={[0, 0, Math.PI / 4]}>
+          <boxGeometry args={[1.3, 0.18, 0.04]} />
+          <meshStandardMaterial color="#ffffff" roughness={0.5} />
+        </mesh>
+        <mesh rotation={[0, 0, -Math.PI / 4]}>
+          <boxGeometry args={[1.3, 0.18, 0.04]} />
+          <meshStandardMaterial color="#ffffff" roughness={0.5} />
+        </mesh>
+        <mesh rotation={[0, 0, Math.PI / 4]} position={[0, 0, 0.025]}>
+          <boxGeometry args={[1.1, 0.08, 0.02]} />
+          <meshStandardMaterial color="#b91c1c" />
+        </mesh>
+        <mesh rotation={[0, 0, -Math.PI / 4]} position={[0, 0, 0.025]}>
+          <boxGeometry args={[1.1, 0.08, 0.02]} />
+          <meshStandardMaterial color="#b91c1c" />
+        </mesh>
+      </group>
+
+      {/* Dual warning flashers assembly */}
+      <group position={[0, 2.7, 0]}>
+        {/* Horizontal crossbar */}
+        <mesh>
+          <boxGeometry args={[1.4, 0.12, 0.12]} />
+          <meshStandardMaterial color="#1e293b" />
+        </mesh>
+        {/* Left lamp */}
+        <group position={[-0.55, 0, 0.1]}>
+          {/* Black circular backboard */}
+          <mesh position={[0, 0, -0.05]}>
+            <circleGeometry args={[0.3, 16]} />
+            <meshBasicMaterial color="#0f172a" />
+          </mesh>
+          <mesh>
+            <sphereGeometry args={[0.18, 12, 10]} />
+            <meshStandardMaterial
+              color={active ? '#ef4444' : '#7f1d1d'}
+              emissive="#ff1e1e"
+              emissiveIntensity={active && flashAlt ? 3.5 : 0.05}
+            />
+          </mesh>
+        </group>
+        {/* Right lamp */}
+        <group position={[0.55, 0, 0.1]}>
+          <mesh position={[0, 0, -0.05]}>
+            <circleGeometry args={[0.3, 16]} />
+            <meshBasicMaterial color="#0f172a" />
+          </mesh>
+          <mesh>
+            <sphereGeometry args={[0.18, 12, 10]} />
+            <meshStandardMaterial
+              color={active ? '#ef4444' : '#7f1d1d'}
+              emissive="#ff1e1e"
+              emissiveIntensity={active && !flashAlt ? 3.5 : 0.05}
+            />
+          </mesh>
+        </group>
+      </group>
+
+      {/* Warning bell on top */}
+      <mesh position={[0, 3.85, 0]}>
+        <sphereGeometry args={[0.15, 10, 8]} />
+        <meshStandardMaterial color="#b45309" metalness={0.8} roughness={0.3} />
       </mesh>
     </group>
   )
 }
 
-export default function RailwayCrossing() {
+/** Overhead Electrification Catenary Gantry (Electric railway wire support) */
+function CatenaryGantry({ x }) {
+  return (
+    <group position={[x, 0, RAIL_Z]}>
+      {/* South steel lattice pole */}
+      <mesh position={[0, 3.2, 3.1]} castShadow>
+        <boxGeometry args={[0.22, 6.4, 0.22]} />
+        <meshStandardMaterial color="#475569" metalness={0.7} roughness={0.3} />
+      </mesh>
+      {/* North steel lattice pole */}
+      <mesh position={[0, 3.2, -3.1]} castShadow>
+        <boxGeometry args={[0.22, 6.4, 0.22]} />
+        <meshStandardMaterial color="#475569" metalness={0.7} roughness={0.3} />
+      </mesh>
+      {/* Horizontal steel crossbeam spanning tracks */}
+      <mesh position={[0, 6.0, 0]} castShadow>
+        <boxGeometry args={[0.28, 0.35, 6.4]} />
+        <meshStandardMaterial color="#475569" metalness={0.7} roughness={0.3} />
+      </mesh>
+      {/* Cantilever droppers */}
+      {[-0.9, 0.9].map((z) => (
+        <mesh key={z} position={[0, 5.4, z]}>
+          <cylinderGeometry args={[0.02, 0.02, 1.2, 6]} />
+          <meshStandardMaterial color="#64748b" metalness={0.8} />
+        </mesh>
+      ))}
+    </group>
+  )
+}
+
+/** Railway Security Fence along the tracks */
+function RailwayFence({ startX, endX, z }) {
+  const length = endX - startX
+  const centerX = (startX + endX) / 2
+  return (
+    <group position={[centerX, 0.7, z]}>
+      {/* Horizontal rails */}
+      <mesh position={[0, 0.5, 0]}>
+        <boxGeometry args={[length, 0.06, 0.06]} />
+        <meshStandardMaterial color="#94a3b8" metalness={0.6} roughness={0.4} />
+      </mesh>
+      <mesh position={[0, 0, 0]}>
+        <boxGeometry args={[length, 0.06, 0.06]} />
+        <meshStandardMaterial color="#94a3b8" metalness={0.6} roughness={0.4} />
+      </mesh>
+      {/* Fence posts */}
+      {Array.from({ length: Math.floor(length / 4) + 1 }).map((_, i) => (
+        <mesh key={i} position={[-length / 2 + i * 4, 0, 0]}>
+          <cylinderGeometry args={[0.04, 0.04, 1.4, 6]} />
+          <meshStandardMaterial color="#64748b" metalness={0.7} roughness={0.4} />
+        </mesh>
+      ))}
+    </group>
+  )
+}
+
+/** Railway Gatekeeper Relay Cabin */
+function GatehouseCabin({ position }) {
+  return (
+    <group position={position}>
+      {/* Concrete cabin */}
+      <mesh position={[0, 1.6, 0]} castShadow receiveShadow>
+        <boxGeometry args={[4.2, 3.2, 3.6]} />
+        <meshStandardMaterial color="#e2e8f0" roughness={0.8} />
+      </mesh>
+      {/* Dark roof */}
+      <mesh position={[0, 3.3, 0]} castShadow>
+        <boxGeometry args={[4.6, 0.3, 4.0]} />
+        <meshStandardMaterial color="#0f172a" roughness={0.6} />
+      </mesh>
+      {/* Observation windows facing railway crossing */}
+      <mesh position={[0, 1.8, 1.82]}>
+        <planeGeometry args={[3.2, 1.4]} />
+        <meshStandardMaterial color="#38bdf8" roughness={0.2} metalness={0.8} opacity={0.85} transparent />
+      </mesh>
+      {/* Door */}
+      <mesh position={[1.4, 1.1, -1.82]}>
+        <planeGeometry args={[1.0, 2.2]} rotation={[0, Math.PI, 0]} />
+        <meshStandardMaterial color="#334155" roughness={0.5} />
+      </mesh>
+      {/* Radio antenna */}
+      <mesh position={[-1.6, 4.2, -1.3]}>
+        <cylinderGeometry args={[0.03, 0.06, 2.2, 6]} />
+        <meshStandardMaterial color="#94a3b8" metalness={0.8} />
+      </mesh>
+    </group>
+  )
+}
+
+/** Station Passenger Platform alongside the track (north of track, Z = -26.5) */
+function StationPlatform() {
+  return (
+    <group position={[28, 0, RAIL_Z - 3.2]}>
+      {/* Concrete platform slab */}
+      <mesh position={[0, 0.42, 0]} receiveShadow castShadow>
+        <boxGeometry args={[32, 0.84, 3.4]} />
+        <meshStandardMaterial color="#cbd5e1" roughness={0.85} />
+      </mesh>
+      {/* Yellow tactile safety edge along track */}
+      <mesh position={[0, 0.85, 1.55]}>
+        <boxGeometry args={[32, 0.02, 0.3]} />
+        <meshStandardMaterial color="#facc15" roughness={0.6} />
+      </mesh>
+      {/* Platform waiting canopy */}
+      <mesh position={[0, 3.2, -0.4]} castShadow>
+        <boxGeometry args={[22, 0.2, 2.6]} />
+        <meshStandardMaterial color="#0284c7" metalness={0.6} roughness={0.3} />
+      </mesh>
+      {/* Canopy support columns */}
+      {[-8, 0, 8].map((px) => (
+        <mesh key={px} position={[px, 1.9, -0.4]}>
+          <cylinderGeometry args={[0.08, 0.08, 2.3, 8]} />
+          <meshStandardMaterial color="#1e293b" metalness={0.7} />
+        </mesh>
+      ))}
+      {/* Platform benches */}
+      {[-6, 6].map((bx) => (
+        <mesh key={bx} position={[bx, 1.1, -0.6]} castShadow>
+          <boxGeometry args={[2.2, 0.45, 0.6]} />
+          <meshStandardMaterial color="#78350f" roughness={0.8} />
+        </mesh>
+      ))}
+    </group>
+  )
+}
+
+export default function RailwayCrossing({ mode = 'day' }) {
   const { railwayStatus, railwayProgress } = useSimulation()
   const northGate = useRef()
   const southGate = useRef()
   const train = useRef()
-  const lamp = useRef()
-  const lamp2 = useRef()
-  const lampMaterial = useRef()
-  const lampMaterial2 = useRef()
+  const lampLight = useRef()
+  const lampLight2 = useRef()
+
   const closed = ['CLOSED', 'TRAIN PASSING', 'CLEARANCE'].includes(railwayStatus)
   const active = ACTIVE.includes(railwayStatus)
 
+  // Track length spans the entire metropolitan footprint
+  const TRACK_LENGTH = 260
+  const SLEEPER_COUNT = Math.floor(TRACK_LENGTH / 1.5)
+
   useFrame((state, delta) => {
-    const target = closed ? 0 : (railwayStatus === 'WARNING' ? 0 : Math.PI / 2)
-    if (northGate.current) northGate.current.rotation.z = MathUtils.damp(northGate.current.rotation.z, target, 1.4, delta)
-    if (southGate.current) southGate.current.rotation.z = MathUtils.damp(southGate.current.rotation.z, target, 1.4, delta)
+    // Smooth gate arm rotation: 0 is horizontal (closed), PI/2 is vertical (open)
+    const targetGate = closed ? 0 : (railwayStatus === 'WARNING' ? 0 : Math.PI / 2)
+    if (northGate.current) northGate.current.rotation.z = MathUtils.damp(northGate.current.rotation.z, targetGate, 1.8, delta)
+    if (southGate.current) southGate.current.rotation.z = MathUtils.damp(southGate.current.rotation.z, targetGate, 1.8, delta)
+
+    // Smooth train travel across the entire metropolis (from x = -95 to x = +115)
     if (train.current) {
-      train.current.position.x = -47 + railwayProgress * 83
-      train.current.visible = railwayStatus === 'TRAIN PASSING' || railwayStatus === 'CLEARANCE'
+      if (railwayStatus === 'TRAIN PASSING') {
+        // Traverses from western off-screen tracks across the road into eastern district
+        train.current.position.x = -95 + railwayProgress * 190
+        train.current.visible = true
+      } else if (railwayStatus === 'CLEARANCE') {
+        // Exits smoothly into distant tracks
+        train.current.position.x = 95 + delta * 25
+        train.current.visible = true
+      } else {
+        train.current.visible = false
+      }
     }
-    const blink = active && Math.sin(state.clock.elapsedTime * 8) > 0 ? 2.4 : 0.05
-    if (lamp.current) lamp.current.intensity = blink
-    if (lamp2.current) lamp2.current.intensity = blink
-    if (lampMaterial.current) lampMaterial.current.emissiveIntensity = blink
-    if (lampMaterial2.current) lampMaterial2.current.emissiveIntensity = blink
+
+    // Alternating flashers for the warning signals
+    const blink = active && Math.sin(state.clock.elapsedTime * 9) > 0
+    if (lampLight.current) lampLight.current.intensity = blink ? 2.8 : 0
+    if (lampLight2.current) lampLight2.current.intensity = blink ? 2.8 : 0
   })
+
+  // Precompute sleeper X positions
+  const sleeperPositions = useMemo(() => {
+    return Array.from({ length: SLEEPER_COUNT }, (_, i) => -TRACK_LENGTH / 2 + i * 1.5 + 0.75)
+  }, [SLEEPER_COUNT, TRACK_LENGTH])
+
+  const ballastMap = useMemo(() => {
+    const tex = getBallastTexture().clone()
+    tex.repeat.set(TRACK_LENGTH / 6, 1)
+    tex.needsUpdate = true
+    return tex
+  }, [TRACK_LENGTH])
+
+  // Catenary gantry positions along the track (skipping the road crossing zone [-10, 10])
+  const gantryPositions = [-110, -85, -60, -35, -15, 15, 35, 60, 85, 110]
 
   return (
     <group>
-      {/* East-west ground-level railway crossing on the north road approach. */}
+      {/* =========================================================================
+          RAILWAY TRACK INFRASTRUCTURE (Ballast bed, sleepers, steel rails, wires)
+         ========================================================================= */}
+      {/* 1. Crushed dark-stone ballast gravel bed */}
+      <mesh position={[0, 0.08, RAIL_Z]} receiveShadow>
+        <boxGeometry args={[TRACK_LENGTH, 0.16, 5.0]} />
+        <meshStandardMaterial
+          color="#38332f"
+          map={ballastMap}
+          roughnessMap={ballastMap}
+          roughness={0.95}
+        />
+      </mesh>
+
+      {/* 2. Wooden sleepers along entire length */}
+      {sleeperPositions.map((x) => (
+        <mesh key={`sleeper-${x}`} position={[x, 0.18, RAIL_Z]} receiveShadow>
+          <boxGeometry args={[0.34, 0.12, 3.2]} />
+          <meshStandardMaterial color="#54433a" roughness={0.9} />
+        </mesh>
+      ))}
+
+      {/* 3. Continuous Shiny Steel Rails */}
       {[-0.92, 0.92].map((z) => (
-        <mesh key={`rail-${z}`} position={[0, 0.16, RAIL_Z + z]} receiveShadow>
-          <boxGeometry args={[78, 0.22, 0.18]} />
-          <meshStandardMaterial color="#aeb7ba" metalness={0.75} roughness={0.27} />
+        <mesh key={`rail-${z}`} position={[0, 0.28, RAIL_Z + z]} receiveShadow>
+          <boxGeometry args={[TRACK_LENGTH, 0.2, 0.14]} />
+          <meshStandardMaterial color="#d1d5db" metalness={0.88} roughness={0.18} />
         </mesh>
       ))}
-      {Array.from({ length: 47 }, (_, i) => -38 + i * 1.65).map((x) => (
-        <mesh key={`sleeper-${x}`} position={[x, 0.09, RAIL_Z]}>
-          <boxGeometry args={[0.32, 0.12, 3.15]} />
-          <meshStandardMaterial color="#665347" roughness={0.9} />
-        </mesh>
+
+      {/* 4. Overhead Electrification Catenary Wire (continuous thin copper wire) */}
+      <mesh position={[0, 5.2, RAIL_Z]}>
+        <boxGeometry args={[TRACK_LENGTH, 0.025, 0.025]} />
+        <meshStandardMaterial color="#f59e0b" metalness={0.9} roughness={0.2} />
+      </mesh>
+
+      {/* 5. Catenary support gantries */}
+      {gantryPositions.map((gx) => (
+        <CatenaryGantry key={`gantry-${gx}`} x={gx} />
       ))}
-      {[-4.15, 4.15].map((offset, index) => (
-        <group key={`barrier-${offset}`} position={[-5.1, 0.72, RAIL_Z + offset]}>
-          <mesh position={[0, -0.35, 0]}><boxGeometry args={[0.55, 0.75, 0.55]} /><meshStandardMaterial color="#4b5563" /></mesh>
+
+      {/* 6. Security Fences along both sides (leaving road open [-9.5, 9.5]) */}
+      <RailwayFence startX={-TRACK_LENGTH / 2} endX={-9.8} z={RAIL_Z + 2.7} />
+      <RailwayFence startX={9.8} endX={TRACK_LENGTH / 2} z={RAIL_Z + 2.7} />
+      <RailwayFence startX={-TRACK_LENGTH / 2} endX={-9.8} z={RAIL_Z - 2.7} />
+      <RailwayFence startX={9.8} endX={TRACK_LENGTH / 2} z={RAIL_Z - 2.7} />
+
+      {/* 7. Gatekeeper Cabin safely set back at X = -14, Z = -28.5 (5.5m clear of track!) */}
+      <GatehouseCabin position={[-14, 0, RAIL_Z - 5.5]} />
+
+      {/* 8. Station Passenger Platform on the north side at Z = -26.2 */}
+      <StationPlatform />
+
+      {/* =========================================================================
+          CROSSING GATES & WARNING SIGNALS AT ROAD APPROACH
+         ========================================================================= */}
+      {/* North and South Automated Barrier Gates */}
+      {[-4.3, 4.3].map((offset, index) => (
+        <group key={`barrier-${offset}`} position={[-5.4, 0.75, RAIL_Z + offset]}>
+          {/* Sturdy base mechanism housing */}
+          <mesh position={[0, -0.35, 0]} castShadow>
+            <boxGeometry args={[0.7, 0.85, 0.7]} />
+            <meshStandardMaterial color="#334155" metalness={0.5} roughness={0.5} />
+          </mesh>
+          {/* Pivoting barrier arm with red/white safety stripes */}
           <group ref={index === 0 ? northGate : southGate} rotation={[0, 0, closed ? 0 : Math.PI / 2]}>
-            <mesh position={[5.1, 0, 0]} castShadow>
-              <boxGeometry args={[10.5, 0.2, 0.22]} />
-              <meshStandardMaterial color="#f3f4f6" />
+            <mesh position={[5.4, 0, 0]} castShadow>
+              <boxGeometry args={[11.2, 0.22, 0.22]} />
+              <meshStandardMaterial color="#f8fafc" />
             </mesh>
-            {Array.from({ length: 5 }, (_, i) => (
-              <mesh key={i} position={[1.15 + i * 1.8, 0.01, 0.12]}>
-                <boxGeometry args={[0.8, 0.205, 0.025]} />
-                <meshStandardMaterial color="#d62828" />
+            {/* Red reflective stripes */}
+            {Array.from({ length: 6 }, (_, i) => (
+              <mesh key={i} position={[1.1 + i * 1.8, 0.01, 0.12]}>
+                <boxGeometry args={[0.85, 0.23, 0.025]} />
+                <meshStandardMaterial color="#dc2626" />
               </mesh>
             ))}
+            {/* Tip LED warning lamp */}
+            <mesh position={[10.9, 0, 0]}>
+              <sphereGeometry args={[0.1, 8, 8]} />
+              <meshStandardMaterial color="#ef4444" emissive="#ef4444" emissiveIntensity={closed ? 3 : 0.1} />
+            </mesh>
           </group>
         </group>
       ))}
-      <CrossingSign position={[-7.2, 0, RAIL_Z - 4.2]} active={active} materialRef={lampMaterial} />
-      <CrossingSign position={[7.2, 0, RAIL_Z + 4.2]} active={active} materialRef={lampMaterial2} />
-      <pointLight ref={lamp} color="#ff3030" intensity={0} distance={7} position={[-7.2, 1.7, RAIL_Z - 4.2]} />
-      <pointLight ref={lamp2} color="#ff3030" intensity={0} distance={7} position={[7.2, 1.7, RAIL_Z + 4.2]} />
-      <group ref={train} visible={false} position={[-47, 0, RAIL_Z]}>
-        <Coach x={0} locomotive />
-        <Coach x={-7.8} />
-        <Coach x={-15.5} />
-        <Coach x={-23.2} />
+
+      {/* Level Crossing Warning Signals with Alternating Red Lamps */}
+      <CrossingSignal position={[-7.2, 0, RAIL_Z - 4.5]} active={active} flashAlt={true} />
+      <CrossingSignal position={[7.2, 0, RAIL_Z + 4.5]} active={active} flashAlt={false} />
+
+      <pointLight ref={lampLight} color="#ff2222" intensity={0} distance={8} position={[-7.2, 2.7, RAIL_Z - 4.5]} />
+      <pointLight ref={lampLight2} color="#ff2222" intensity={0} distance={8} position={[7.2, 2.7, RAIL_Z + 4.5]} />
+
+      {/* =========================================================================
+          THE TRAIN: High-speed electric locomotive + 4 Passenger Coaches
+         ========================================================================= */}
+      <group ref={train} visible={false} position={[-95, 0, RAIL_Z]}>
+        {/* Locomotive (Leading engine) */}
+        <Coach x={0} locomotive={true} mode={mode} />
+        {/* Passenger Coaches */}
+        <Coach x={-8.5} mode={mode} />
+        <Coach x={-16.7} mode={mode} />
+        <Coach x={-24.9} mode={mode} />
+        {/* Tail Coach with red taillights */}
+        <Coach x={-33.1} isLast={true} mode={mode} />
       </group>
     </group>
   )

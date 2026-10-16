@@ -36,7 +36,7 @@ export default function RailwayPanel() {
           <button onClick={() => setRailwayMode('manual')} className="flex items-center gap-1 font-medium hover:text-junction-text"><Radio className="h-3 w-3" /> Manual</button>
         )}
       </div>
-      <p className="mt-2 text-[9px] leading-relaxed text-junction-muted">Independent train demo; junction traffic is not routed through this crossing.</p>
+      <p className="mt-2 text-[9px] leading-relaxed text-junction-muted">Traffic halts automatically before the crossing gates when the train approaches.</p>
     </section>
   )
 }
