@@ -3,7 +3,7 @@
  */
 import { Play, Pause, RotateCcw, Gauge } from 'lucide-react'
 import { motion } from 'motion/react'
-import { useSimulation } from '../simulation/simulationState'
+import { useSimulation } from '../simulation/useSimulation'
 
 export default function SimulationControls() {
   const { isRunning, toggleRunning, reset, spawnRate, setSpawnRate, elapsedTime } = useSimulation()

@@ -2,7 +2,7 @@
  * SignalPanel.jsx — Visual status of all four traffic signals.
  */
 import { motion } from 'motion/react'
-import { useSimulation } from '../simulation/simulationState'
+import { useSimulation } from '../simulation/useSimulation'
 
 const DIRECTIONS = [
   { key: 'north', label: 'North', short: 'N' },

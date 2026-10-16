@@ -2,7 +2,7 @@
  * TrafficSignals.jsx — Four traffic signal assemblies at the junction corners.
  * Each signal has red, amber, and green lamps that respond to simulation state.
  */
-import { useSimulation } from '../simulation/simulationState'
+import { useSimulation } from '../simulation/useSimulation'
 import { JUNCTION_SIZE } from './Roads'
 
 const SIGNAL_HEIGHT = 4

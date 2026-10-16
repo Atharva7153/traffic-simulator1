@@ -1,12 +1,17 @@
 /**
- * Dashboard.jsx — Main layout assembling the 3D viewport and all dashboard panels.
+ * Dashboard.jsx — Main layout assembling the viewport (3D/2D toggleable)
+ * and all dashboard panels, or rendering the selected tab view.
  */
-import { Car, Timer, TrendingUp, AlertTriangle } from 'lucide-react'
+import { Car, Timer, TrendingUp, AlertTriangle, Eye, Layers } from 'lucide-react'
 import JunctionScene from '../scene/JunctionScene'
-import { useSimulation } from '../simulation/simulationState'
+import TopDownCanvas from '../canvas/TopDownCanvas'
+import { useSimulation } from '../simulation/useSimulation'
 import StatCard from './StatCard'
 import SignalPanel from './SignalPanel'
 import SimulationControls from './SimulationControls'
+import JunctionBuilderPreview from './JunctionBuilderPreview'
+import TrafficAnalysisView from './TrafficAnalysisView'
+import SettingsView from './SettingsView'
 
 function DirectionLegend() {
   return (
@@ -44,23 +49,74 @@ function DirectionLegend() {
 }
 
 export default function Dashboard() {
-  const { stats } = useSimulation()
+  const { stats, activeView, viewMode, setViewMode } = useSimulation()
 
+  // Tab views
+  if (activeView === 'builder') {
+    return <JunctionBuilderPreview />
+  }
+
+  if (activeView === 'analytics') {
+    return <TrafficAnalysisView />
+  }
+
+  if (activeView === 'settings') {
+    return <SettingsView />
+  }
+
+  // Primary Simulation view
   return (
     <div className="flex-1 flex overflow-hidden">
-      {/* Main 3D Viewport */}
-      <div className="flex-1 relative">
-        <JunctionScene />
-        {/* Viewport label */}
-        <div className="absolute top-3 left-3 bg-black/40 backdrop-blur-sm rounded-md px-2.5 py-1 border border-white/5">
-          <span className="text-[10px] font-medium text-white/60 uppercase tracking-wider">
-            3D Viewport — Orbit: Drag · Zoom: Scroll
-          </span>
+      {/* Main Viewport (3D or 2D Top-Down Canvas) */}
+      <div className="flex-1 relative bg-junction-dark">
+        {/* Render either 3D Three.js scene or 2D HTML Canvas */}
+        {viewMode === '3d' ? (
+          <JunctionScene />
+        ) : (
+          <TopDownCanvas />
+        )}
+
+        {/* View mode switcher badge & controls */}
+        <div className="absolute top-3 left-3 flex items-center gap-2 z-10">
+          {/* Segmented Switcher for 3D vs 2D Top-Down */}
+          <div className="flex items-center bg-black/60 backdrop-blur-md p-1 rounded-lg border border-white/10 shadow-lg">
+            <button
+              onClick={() => setViewMode('3d')}
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-medium transition-all ${
+                viewMode === '3d'
+                  ? 'bg-junction-accent text-junction-dark font-semibold shadow'
+                  : 'text-junction-muted hover:text-white'
+              }`}
+            >
+              <Eye className="w-3.5 h-3.5" />
+              <span>3D Scene</span>
+            </button>
+            <button
+              onClick={() => setViewMode('2d')}
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-medium transition-all ${
+                viewMode === '2d'
+                  ? 'bg-junction-accent text-junction-dark font-semibold shadow'
+                  : 'text-junction-muted hover:text-white'
+              }`}
+            >
+              <Layers className="w-3.5 h-3.5" />
+              <span>2D Canvas</span>
+            </button>
+          </div>
+
+          {/* Interaction hint */}
+          <div className="hidden sm:block bg-black/50 backdrop-blur-sm rounded-md px-2.5 py-1.5 border border-white/5">
+            <span className="text-[10px] font-medium text-white/70 tracking-wider">
+              {viewMode === '3d'
+                ? '3D Orbit: Left-drag · Pan: Right-drag · Zoom: Scroll'
+                : 'Top-Down 2D HTML Canvas · Auto-resizing · Shared Simulation State'}
+            </span>
+          </div>
         </div>
       </div>
 
       {/* Right sidebar */}
-      <aside className="w-64 flex flex-col gap-2 p-2 border-l border-junction-border bg-junction-dark/50 overflow-y-auto">
+      <aside className="w-64 flex flex-col gap-2 p-2 border-l border-junction-border bg-junction-dark/50 overflow-y-auto shrink-0">
         {/* Stats row */}
         <div className="grid grid-cols-2 gap-2">
           <StatCard

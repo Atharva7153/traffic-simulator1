@@ -1,18 +1,12 @@
 /**
- * Simulation state management using React context.
- * Phase 1: Provides basic signal cycling, play/pause, and spawn rate control.
- * Phase 2 will extend this with the full traffic simulation engine.
+ * SimulationProvider.jsx / simulationState.jsx
+ * Provides simulation state, timer loops, and controls to the application.
  */
 
-import { createContext, useContext, useReducer, useCallback, useRef, useEffect } from 'react'
-
-// Signal phases: which directions get green
-const SIGNAL_PHASES = [
-  { name: 'NS_GREEN', north: 'green', south: 'green', east: 'red', west: 'red', duration: 8000 },
-  { name: 'NS_AMBER', north: 'amber', south: 'amber', east: 'red', west: 'red', duration: 2000 },
-  { name: 'EW_GREEN', north: 'red', south: 'red', east: 'green', west: 'green', duration: 8000 },
-  { name: 'EW_AMBER', north: 'red', south: 'red', east: 'amber', west: 'amber', duration: 2000 },
-]
+import { useReducer, useCallback, useRef, useEffect } from 'react'
+import { createDefaultJunction } from '../network/networkData'
+import { SIGNAL_PHASES } from './simulationConstants'
+import { SimulationContext } from './simulationContext'
 
 const initialState = {
   isRunning: false,
@@ -31,7 +25,9 @@ const initialState = {
     congestionLevel: 'Low',
   },
   elapsedTime: 0,
-  activeView: 'simulation', // simulation | analytics | settings
+  activeView: 'simulation', // 'simulation' | 'builder' | 'analytics' | 'settings'
+  viewMode: '3d', // '3d' | '2d' (Top-down HTML Canvas)
+  network: createDefaultJunction(), // Data-driven road network architecture
 }
 
 function simulationReducer(state, action) {
@@ -39,9 +35,16 @@ function simulationReducer(state, action) {
     case 'TOGGLE_RUNNING':
       return { ...state, isRunning: !state.isRunning }
     case 'RESET':
-      return { ...initialState }
+      return {
+        ...initialState,
+        viewMode: state.viewMode,
+        activeView: state.activeView,
+        network: state.network,
+      }
     case 'SET_SPAWN_RATE':
       return { ...state, spawnRate: action.payload }
+    case 'SET_VIEW_MODE':
+      return { ...state, viewMode: action.payload }
     case 'ADVANCE_PHASE': {
       const nextIndex = (state.currentPhaseIndex + 1) % SIGNAL_PHASES.length
       const phase = SIGNAL_PHASES[nextIndex]
@@ -60,12 +63,12 @@ function simulationReducer(state, action) {
       return { ...state, activeView: action.payload }
     case 'TICK':
       return { ...state, elapsedTime: state.elapsedTime + 1 }
+    case 'SET_NETWORK':
+      return { ...state, network: action.payload }
     default:
       return state
   }
 }
-
-const SimulationContext = createContext(null)
 
 export function SimulationProvider({ children }) {
   const [state, dispatch] = useReducer(simulationReducer, initialState)
@@ -78,6 +81,8 @@ export function SimulationProvider({ children }) {
   }, [])
   const setSpawnRate = useCallback((val) => dispatch({ type: 'SET_SPAWN_RATE', payload: val }), [])
   const setView = useCallback((view) => dispatch({ type: 'SET_VIEW', payload: view }), [])
+  const setViewMode = useCallback((mode) => dispatch({ type: 'SET_VIEW_MODE', payload: mode }), [])
+  const setNetwork = useCallback((net) => dispatch({ type: 'SET_NETWORK', payload: net }), [])
 
   // Signal cycling timer
   useEffect(() => {
@@ -105,6 +110,8 @@ export function SimulationProvider({ children }) {
     reset,
     setSpawnRate,
     setView,
+    setViewMode,
+    setNetwork,
   }
 
   return (
@@ -114,10 +121,4 @@ export function SimulationProvider({ children }) {
   )
 }
 
-export function useSimulation() {
-  const ctx = useContext(SimulationContext)
-  if (!ctx) throw new Error('useSimulation must be used within SimulationProvider')
-  return ctx
-}
-
-export { SIGNAL_PHASES }
+export default SimulationProvider
