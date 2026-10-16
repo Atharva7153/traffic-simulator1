@@ -105,7 +105,7 @@ function SignalAssembly({ position, rotation, signalState, signTexture }) {
 
 export default function TrafficSignals() {
   const { signals } = useSimulation()
-  const signTexture = useMemo(createStraightOnlyTexture, [])
+  const signTexture = useMemo(() => createStraightOnlyTexture(), [])
   const rotations = { north: 0, south: Math.PI, east: -Math.PI / 2, west: Math.PI / 2 }
 
   return (
